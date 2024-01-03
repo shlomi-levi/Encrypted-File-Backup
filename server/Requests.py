@@ -1,4 +1,6 @@
 
+# TODO: check that name fields are null terminated. I might have to do this in the cpp code instead of here. i need to think about it
+
 from abc import ABC
 import struct
 from enum import Enum
@@ -46,7 +48,13 @@ class Registration(RequestPayload):
 
     @staticmethod
     def handle_request(header:RequestHeader, payload):
-        name = struct.unpack(f"<255s", payload)[0]
+        client_name = struct.unpack("<s", payload)[0]
+
+        return Registration(client_name)
+
+    def __init__(self, client_name):
+        self.name = client_name
+
 
 class PublicKeyTransfer(RequestPayload):
     name:str
@@ -54,12 +62,32 @@ class PublicKeyTransfer(RequestPayload):
 
     @staticmethod
     def handle_request(header:RequestHeader, payload):
+        client_name_size = 255
+        public_key_size = 160
+
+        client_name = struct.unpack(f"<{client_name_size}s", payload)[0]
+        payload = payload[client_name_size:]
+
+        public_key = struct.unpack(f"<{public_key_size}s", payload)[0]
+
+        return PublicKeyTransfer(client_name, public_key)
+
+    def __init__(self, client_name, public_key):
+        self.client_name = client_name
+        self.public_key = public_key
 
 class Relogin(RequestPayload):
     name:str
 
     @staticmethod
     def handle_request(header:RequestHeader, payload):
+        client_name = struct.unpack("<s", payload)[0]
+
+        return Relogin(client_name)
+
+    def __init__(self, client_name):
+        self.client_name = client_name
+
 
 class FileTransfer(RequestPayload):
     content_size:int
@@ -72,11 +100,20 @@ class FileTransfer(RequestPayload):
     @staticmethod
     def handle_request(header:RequestHeader, payload):
 
+        content_size_field_length = 4
+        original_size_field_length = 4
+        packet_number_field_length = 2
+        total_packets_field_length = 2
+        file_name_field_length = 255
+
+        content_size = struct.unpack(f"<{content_size_field_length}I")
+
 class ValidCRC(RequestPayload):
     file_name:str
 
     @staticmethod
     def handle_request(header:RequestHeader, payload):
+
 
 class InvalidCRC(RequestPayload):
     file_name:str
