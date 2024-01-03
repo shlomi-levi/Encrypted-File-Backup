@@ -1,6 +1,8 @@
 
 # TODO: check that name fields are null terminated. I might have to do this in the cpp code instead of here. i need to think about it
 
+# TODO: finish handle_request static methods
+
 from abc import ABC
 import struct
 from enum import Enum
