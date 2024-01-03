@@ -16,13 +16,12 @@ class Server:
             # sock.setblocking()
             conn, addr = sock.accept()
             # TODO: add support to multiple clients
-
-            request_bytes = conn.recv(Requests.Header_Size)
-
-            struct.unpack("<", request_bytes)
+            self.handle_request_header(conn, addr)
 
 
-            request_bytes.split()
+
+
+
 
     def handle_login_request(self, name:str, public_key:bytes):
         user_uuid = uuid.uuid4()

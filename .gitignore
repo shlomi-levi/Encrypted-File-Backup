@@ -1,3 +1,6 @@
 server/.idea
 server/.venv
 server/__pycache__
+venv/
+.idea/
+server/test.py
