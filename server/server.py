@@ -2,12 +2,11 @@ from User import User
 import uuid
 import Requests
 import socket
-import struct
+
 from Crypto.Cipher import AES
 
 class Server:
     users_map:dict[uuid]
-
 
     def wait_for_requests(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -16,14 +15,13 @@ class Server:
             # sock.setblocking()
             conn, addr = sock.accept()
             # TODO: add support to multiple clients
-            self.handle_request_header(conn, addr)
+            req:Requests.Request = Requests.Request.parse_request(conn)
+
+    def start(self):
+        self.wait_for_requests()
 
 
-
-
-
-
-    def handle_login_request(self, name:str, public_key:bytes):
+    def handle_login_request(self, req:Requests.Request):
         user_uuid = uuid.uuid4()
 
         while user_uuid in self.users_map:

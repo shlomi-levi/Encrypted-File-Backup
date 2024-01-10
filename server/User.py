@@ -5,4 +5,4 @@ class User:
     name:str
     UUID:uuid
     public_key:bytes
-    AES_key:AES
+    AES_key:AES # encrypted with public key
