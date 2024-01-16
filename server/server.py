@@ -1,6 +1,7 @@
 from User import User
 import uuid
 import Requests
+import Responses
 import socket
 
 from Crypto.Cipher import AES
@@ -20,20 +21,22 @@ class Server:
     def start(self):
         self.wait_for_requests()
 
-
-    def handle_login_request(self, req:Requests.Request):
+    def handle_login_request(self, req:Requests.Request) -> Responses.Response:
         user_uuid = uuid.uuid4()
 
         while user_uuid in self.users_map:
             user_uuid = uuid.uuid4()
 
-        cipher = AES.new(public_key, AES.MODE_EAX)
+        self.users_map[user_uuid] = User(req.payload.name, user_uuid, None, None)
+
+        res = Responses.Response
         # TODO: send the client the hexdigest, and make sure it was sent.
 
+    def handle_pubic_key_transfer_request(self, req:Requests.Request):
+        if req.header.client_id not in self.users_map:
+            # todo: Return error response or something (maybe response 1606, ask in forum)
 
-        self.users_map[user_uuid] = User(name, user_uuid, public_key, cipher)
-
-
+        cipher = AES.new(req.payload.public_key, AES.MODE_EAX)
 
 
         # Encryption:

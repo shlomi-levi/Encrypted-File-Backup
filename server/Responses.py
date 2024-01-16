@@ -32,6 +32,13 @@ class ResponseHeader:
 
         return struct.pack("<BHL", self.version, self.code, self.payload_size)
 
+class Response(ABC):
+    header:ResponseHeader
+
+    @abstractmethod
+    def pack(self) -> bytes:
+        pass
+
 class ResponsePayload(ABC):
     @abstractmethod
     def pack(self) -> bytes:
@@ -39,10 +46,6 @@ class ResponsePayload(ABC):
 
 class RegisterationSuccess(ResponsePayload):
     client_id:str
-
-    @staticmethod
-    def generate_payload(payload):
-        pass
 
     def pack(self) -> bytes:
         # Small endian of:
