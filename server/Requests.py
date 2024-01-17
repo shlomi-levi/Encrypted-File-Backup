@@ -5,7 +5,7 @@
 
 from abc import ABC, abstractmethod
 import struct
-from enum import Enum
+from constants import *
 
 Header_Size = 23
 Header_Client_Id_Size = 16
@@ -13,51 +13,45 @@ Header_Version_Size = 1
 Header_Code_Size = 2
 Header_Payload_Size = 4
 
-class Request_Codes(Enum):
-    REGISTRATION = 1025
-    PUBLIC_KEY_TRANSFER = 1026
-    RELOGIN = 1027
-    FILETRANSFER = 1028
-    VALIDCRC = 1029
-    INVALIDCRC = 1030
-    INVALIDCRCFOURTHTIME = 1031
-
 class RequestHeader:
     client_id: str
     version: int
-    code: int
+    code: Request_Codes
     payload_size: int
 
-    def __init__(self, clientid:str, version:int, code:int, payloadsize:int):
+    def __init__(self, clientid:str, version:int, code:Request_Codes, payloadsize:int):
         self.client_id = clientid
         self.version = version
         self.code = code
         self.payload_size = payloadsize
 
-class RequestPayload(ABC):
+class Request(ABC):
+    header:RequestHeader
+
     @staticmethod
     @abstractmethod
-    def parse_payload(payload: bytes) -> "RequestPayload":
+    def create_request_from_payload(header:RequestHeader, payload:bytes):
         pass
 
-class Registration(RequestPayload):
+class Registration(Request):
     name:str
 
     @staticmethod
-    def parse_payload(payload:bytes) -> RequestPayload:
+    def create_request_from_payload(header:RequestHeader, payload:bytes) -> Request:
         client_name = struct.unpack("<s", payload)[0]
 
-        return Registration(client_name)
+        return Registration(header, client_name)
 
-    def __init__(self, client_name):
+    def __init__(self, header:RequestHeader, client_name):
+        self.header = header
         self.name = client_name
 
-class PublicKeyTransfer(RequestPayload):
+class PublicKeyTransfer(Request):
     name:str
     public_key:str
 
     @staticmethod
-    def parse_payload(payload:bytes) -> RequestPayload:
+    def create_request_from_payload(header:RequestHeader, payload:bytes) -> Request:
         client_name_size = 255
         public_key_size = 160
 
@@ -66,25 +60,27 @@ class PublicKeyTransfer(RequestPayload):
 
         public_key = struct.unpack(f"<{public_key_size}s", payload)[0]
 
-        return PublicKeyTransfer(client_name, public_key)
+        return PublicKeyTransfer(header, client_name, public_key)
 
-    def __init__(self, client_name, public_key):
+    def __init__(self, header:RequestHeader, client_name, public_key):
+        self.header = header
         self.client_name = client_name
         self.public_key = public_key
 
-class Relogin(RequestPayload):
+class Relogin(Request):
     name:str
 
     @staticmethod
-    def parse_payload(payload:bytes) -> RequestPayload:
+    def create_request_from_payload(header:RequestHeader, payload:bytes) -> Request:
         client_name = struct.unpack("<s", payload)[0]
 
-        return Relogin(client_name)
+        return Relogin(header, client_name)
 
-    def __init__(self, client_name):
+    def __init__(self, header:RequestHeader, client_name):
+        self.header = header
         self.client_name = client_name
 
-class FileTransfer(RequestPayload):
+class FileTransfer(Request):
     content_size:int
     original_file_size:int
     packet_number:int
@@ -93,7 +89,7 @@ class FileTransfer(RequestPayload):
     message_content:bytes
 
     @staticmethod
-    def parse_payload(payload:bytes) -> RequestPayload:
+    def create_request_from_payload(header:RequestHeader, payload:bytes) -> Request:
         content_size_field_length = 4
         original_size_field_length = 4
         packet_number_field_length = 2
@@ -110,97 +106,92 @@ class FileTransfer(RequestPayload):
 
         message_content = struct.unpack("<", payload)[0]
 
-        return FileTransfer(content_size, original_size, packet_number, total_packets, file_name, message_content)
+        return FileTransfer(header, content_size, original_size, packet_number, total_packets, file_name, message_content)
 
-    def __init__(self, content_size, original_file_size, packet_number, total_packets, file_name, message_content):
+    def __init__(self, header:RequestHeader, content_size, original_file_size, packet_number, total_packets, file_name, message_content):
+        self.header = header
         self.content_size = content_size
         self.original_file_size = original_file_size
         self.packet_number = packet_number
         self.total_packets = total_packets
-        self . file_name = file_name
+        self.file_name = file_name
         self.message_content = message_content
 
-class ValidCRC(RequestPayload):
+class ValidCRC(Request):
     file_name:str
 
     @staticmethod
-    def parse_payload(payload:bytes) -> RequestPayload:
+    def create_request_from_payload(header:RequestHeader, payload:bytes) -> Request:
         file_name_field_length = 255
         file_name = struct.unpack(f"<{file_name_field_length}s", payload)[0]
 
-        return ValidCRC(file_name)
-    def __init__(self, file_name):
-        self.file_name = file_name
-
-class InvalidCRC(RequestPayload):
-    file_name:str
-
-    @staticmethod
-    def parse_payload(payload:bytes) -> RequestPayload:
-        file_name_field_length = 255
-        file_name = struct.unpack(f"<{file_name_field_length}s", payload)[0]
-
-        return ValidCRC(file_name)
-
-    def __init__(self, file_name):
-        self.file_name = file_name
-
-class InvalidCRCFourthTime(RequestPayload):
-    file_name:str
-
-    @staticmethod
-    def parse_payload(payload:bytes) -> RequestPayload:
-        file_name_field_length = 255
-        file_name = struct.unpack(f"<{file_name_field_length}s", payload)[0]
-
-        return ValidCRC(file_name)
-
-    def __init__(self, file_name):
-        self.file_name = file_name
-
-class Request:
-    header:RequestHeader
-    payload:RequestPayload
-
-    def __init__(self, header:RequestHeader, payload:RequestPayload):
+        return ValidCRC(header, file_name)
+    def __init__(self, header:RequestHeader, file_name):
         self.header = header
-        self.payload = payload
+        self.file_name = file_name
 
-    Request_Codes_To_Handlers = {
-        Request_Codes.REGISTRATION: Registration.parse_payload,
-        Request_Codes.PUBLIC_KEY_TRANSFER: PublicKeyTransfer.parse_payload,
-        Request_Codes.RELOGIN: Relogin.parse_payload,
-        Request_Codes.FILETRANSFER: FileTransfer.parse_payload,
-        Request_Codes.VALIDCRC: ValidCRC.parse_payload,
-        Request_Codes.INVALIDCRC: InvalidCRC.parse_payload,
-        Request_Codes.INVALIDCRCFOURTHTIME: InvalidCRCFourthTime.parse_payload
-    }
+class InvalidCRC(Request):
+    file_name:str
+
     @staticmethod
-    def parse_request(conn):
-        try:
-            request_bytes = conn.recv(Header_Size)  # Get the header
+    def create_request_from_payload(header:RequestHeader, payload:bytes) -> Request:
+        file_name_field_length = 255
+        file_name = struct.unpack(f"<{file_name_field_length}s", payload)[0]
 
-            client_id = struct.unpack(f"<{Header_Client_Id_Size}s", request_bytes[:Header_Client_Id_Size])[0]
+        return ValidCRC(header, file_name)
 
-            version, code, payload_size = struct.unpack("<BHL", request_bytes[Header_Client_Id_Size:])
+    def __init__(self, header:RequestHeader, file_name):
+        self.header = header
+        self.file_name = file_name
 
-            if code not in Request.Request_Codes_To_Handlers:
-            # TODO: output error, invalid code
+class InvalidCRCFourthTime(Request):
+    file_name:str
 
-            if payload_size != desired_payload_size:
-            # TODO: output error, invalid payload size
+    @staticmethod
+    def create_request_from_payload(header:RequestHeader, payload:bytes) -> Request:
+        file_name_field_length = 255
+        file_name = struct.unpack(f"<{file_name_field_length}s", payload)[0]
 
-            payload_bytes:bytes = conn.recv(payload_size)
+        return ValidCRC(header, file_name)
 
-            header = RequestHeader(client_id, version, code, payload_size)
+    def __init__(self, header:RequestHeader, file_name):
+        self.header = header
+        self.file_name = file_name
 
-            payload: RequestPayload = Request.Request_Codes_To_Handlers[code](payload_bytes)
+def parse_request(conn) -> Request:
+    Request_Codes_To_Handlers = {
+        Request_Codes.REGISTRATION: Registration.create_request_from_payload,
+        Request_Codes.PUBLIC_KEY_TRANSFER: PublicKeyTransfer.create_request_from_payload,
+        Request_Codes.RELOGIN: Relogin.create_request_from_payload,
+        Request_Codes.FILETRANSFER: FileTransfer.create_request_from_payload,
+        Request_Codes.VALIDCRC: ValidCRC.create_request_from_payload,
+        Request_Codes.INVALIDCRC: InvalidCRC.create_request_from_payload,
+        Request_Codes.INVALIDCRCFOURTHTIME: InvalidCRCFourthTime.create_request_from_payload
+    }
 
-            return Request(header, payload)
+    try:
+        request_bytes = conn.recv(Header_Size)  # Get the header
 
-        except:
-            return None
+        client_id = struct.unpack(f"<{Header_Client_Id_Size}s", request_bytes[:Header_Client_Id_Size])[0]
 
-        return True
+        version, code, payload_size = struct.unpack("<BHL", request_bytes[Header_Client_Id_Size:])
+
+        if code not in Request_Codes_To_Handlers:
+        # TODO: output error, invalid code
+
+        if payload_size != desired_payload_size:
+        # TODO: output error, invalid payload size
+
+        header = RequestHeader(client_id, version, code, payload_size)
+
+        payload_bytes: bytes = conn.recv(payload_size)
+
+        return Request_Codes_To_Handlers[code](header, payload_bytes)
+
+    except:
+        return None
+
+    return True
+
 
 

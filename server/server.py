@@ -16,20 +16,21 @@ class Server:
             # sock.setblocking()
             conn, addr = sock.accept()
             # TODO: add support to multiple clients
-            req:Requests.Request = Requests.Request.parse_request(conn)
+            req:Requests.Request = Requests.parse_request(conn)
 
     def start(self):
         self.wait_for_requests()
 
     def handle_login_request(self, req:Requests.Request) -> Responses.Response:
-        user_uuid = uuid.uuid4()
+        user_uuid = uuid.uuid4().bytes.decode()
 
         while user_uuid in self.users_map:
             user_uuid = uuid.uuid4()
 
         self.users_map[user_uuid] = User(req.payload.name, user_uuid, None, None)
 
-        res = Responses.Response
+        res = Responses.RegisterationSuccess(user_uuid)
+
         # TODO: send the client the hexdigest, and make sure it was sent.
 
     def handle_pubic_key_transfer_request(self, req:Requests.Request):
