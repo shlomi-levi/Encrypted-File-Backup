@@ -5,7 +5,7 @@ class User:
     name:str
     UUID:uuid
     public_key:bytes
-    AES_key:AES # encrypted with public key
+    AES_key:bytes # encrypted with public key
 
     def __init__(self, name, uuid, public_key, AES_key):
         self.name = name

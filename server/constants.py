@@ -1,6 +1,7 @@
 from enum import Enum
 
 SERVER_VERSION = 3
+AES_Key_Length = 32
 
 class ResponseCodes(Enum):
     RegistrationSuccess = 1600
