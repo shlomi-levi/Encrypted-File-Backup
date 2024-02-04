@@ -5,7 +5,8 @@ import Responses
 import socket
 from constants import *
 
-from Crypto.Cipher import AES
+from Crypto.Cipher import AES, PKCS1_OAEP
+from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 
 class Server:
@@ -22,7 +23,7 @@ class Server:
 
             handler_dict = {
                 Request_Codes.REGISTRATION : self.handle_registration_request,
-                Request_Codes.PUBLIC_KEY_TRANSFER: self.handle_pubic_key_transfer_request,
+                Request_Codes.PUBLIC_KEY_TRANSFER: self.handle_public_key_transfer_request,
                 Request_Codes.RELOGIN: self.handle_relogin_request,
                 Request_Codes.FILETRANSFER: self.handle_file_transfer_request,
                 Request_Codes.VALIDCRC: self.handle_valid_crc_reqeust,
@@ -30,7 +31,8 @@ class Server:
                 Request_Codes.INVALIDCRCFOURTHTIME: self.handle_invalid_crc_fourth_time_request
             }
 
-            handler_dict[req.header.code](req) # type:ignore
+            response = handler_dict[req.header.code](req) # type:ignore
+            # TODO: send response back.
 
     def start(self):
         self.wait_for_requests()
@@ -47,15 +49,24 @@ class Server:
 
         return res
 
-    def handle_pubic_key_transfer_request(self, req:Requests.PublicKeyTransfer):
+    def handle_public_key_transfer_request(self, req:Requests.PublicKeyTransfer):
         if req.header.client_id not in self.users_map:
             # todo: Return error response or something (maybe response 1606, ask in forum)
 
+        u:User = self.users_map[req.header.client_id]
+        u.public_key = req.public_key
+
         session_key = get_random_bytes(AES_Key_Length)
+        rsa = RSA.importKey(req.public_key)
+        cipher_rsa = PKCS1_OAEP.new(rsa)
+        encrypted_aes = cipher_rsa.encrypt(session_key)
 
-        encrypted_session_key = AES.new(req.public_key, AES.MODE_CBC).encrypt(session_key)
 
-        self.users_map[req.header.client_id].AES_key = encrypted_session_key
+        u.AES_key = encrypted_aes
+
+        res = Responses.PublicKeyRecieved(Requests.Header_Client_Id_Size + AES_Key_Length, req.header.client_id, encrypted_aes)
+
+        return res
 
     def handle_relogin_request(self, req:Requests.Relogin) -> Responses.Response:
         pass
