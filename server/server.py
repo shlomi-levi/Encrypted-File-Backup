@@ -56,25 +56,34 @@ class Server:
         u:User = self.users_map[req.header.client_id]
         u.public_key = req.public_key
 
-        session_key = get_random_bytes(AES_Key_Length)
+        session_key = get_random_bytes(SYMMETRIC_AES_KEY_LENGTH)
         rsa = RSA.importKey(req.public_key)
         cipher_rsa = PKCS1_OAEP.new(rsa)
         encrypted_aes = cipher_rsa.encrypt(session_key)
 
 
-        u.AES_key = encrypted_aes
+        u.symmetric_AES_key = encrypted_aes
 
-        res = Responses.PublicKeyRecieved(Requests.Header_Client_Id_Size + AES_Key_Length, req.header.client_id, encrypted_aes)
+        res = Responses.PublicKeyRecieved(Requests.Header_Client_Id_Size + SYMMETRIC_AES_KEY_LENGTH, req.header.client_id, encrypted_aes)
 
         return res
 
     def handle_relogin_request(self, req:Requests.Relogin) -> Responses.Response:
-        pass
+        cid = req.header.client_id
+
+        if cid not in self.users_map or not self.users_map[cid].public_key:
+            return Responses.DeclineReLogin(cid)
+
+        payload_size = Client_ID_Length + AES_Key_Length
+
+        return Responses.AllowRelogin(payload_size, cid, self.users_map[cid].AES_key)
 
     def handle_file_transfer_request(self, req:Requests.FileTransfer) -> Responses.Response:
+        file =
         pass
 
     def handle_valid_crc_reqeust(self, req:Requests.ValidCRC) -> Responses.Response:
+
         pass
 
     def handle_invalid_crc_request(self, req:Requests.InvalidCRC) -> Responses.Response:
