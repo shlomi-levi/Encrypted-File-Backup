@@ -3,4 +3,7 @@ server/.venv
 server/__pycache__
 venv/
 .idea/
+.venv/
 server/test.py
+client/.vs
+client/x64
