@@ -7,3 +7,7 @@ venv/
 server/test.py
 client/.vs
 client/x64
+.vs/
+client/*.bak
+client/*.docx
+client/*.info

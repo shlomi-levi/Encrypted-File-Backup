@@ -3,12 +3,13 @@
 #include <osrng.h>
 #include <rsa.h>
 #include <string>
+#include "Constants.h"
 
 class RSAPublicWrapper
 {
 public:
 	static const unsigned int KEYSIZE = 160;
-	static const unsigned int BITS = 1024;
+	static const unsigned int BITS = Constants::NUM_OF_BITS_IN_RSA_KEY;
 
 private:
 	CryptoPP::AutoSeededRandomPool _rng;
@@ -33,7 +34,7 @@ public:
 class RSAPrivateWrapper
 {
 public:
-	static const unsigned int BITS = 1024;
+	static const unsigned int BITS = Constants::NUM_OF_BITS_IN_RSA_KEY;
 
 private:
 	CryptoPP::AutoSeededRandomPool _rng;

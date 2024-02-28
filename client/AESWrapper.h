@@ -1,12 +1,13 @@
 #pragma once
 
 #include <string>
+#include "Constants.h"
 
 
 class AESWrapper
 {
 public:
-	static const unsigned int DEFAULT_KEYLENGTH = 16;
+	static const unsigned int DEFAULT_KEYLENGTH = Constants::NUM_OF_BITS_IN_AES_KEY / 8;
 private:
 	unsigned char _key[DEFAULT_KEYLENGTH];
 	AESWrapper(const AESWrapper& aes);
