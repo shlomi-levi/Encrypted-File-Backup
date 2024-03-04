@@ -31,9 +31,35 @@ namespace Hex {
 	}
 }
 
+namespace Endian {
+
+}
+
+void copy_from_string_to_array(char array[], int len, const std::string& src, bool add_terminating_zero=false) {
+	static int src_string_len;
+	static int i;
+
+	src_string_len = src.length();
+
+	for(i = 0 ; i < len ; i++)
+		array[i] = '\0'; // fill with zeros.
+
+	if(!add_terminating_zero && src_string_len != len)
+		throw std::invalid_argument("Src string length is bigger than len argument");
+
+	else if(add_terminating_zero && src_string_len + 1 > len)
+		throw std::invalid_argument("Not enough cells in array to add terminating zero");
+
+	for(i = 0 ; i < src_string_len ; i++)
+		array[i] = src[i];
+
+	if(add_terminating_zero)
+		array[i] = '\0';
+}
+
 client_info get_client_info() {
 	client_info result;
-
+	
 	result.UUID = "";
 	result.private_key = "";
 
@@ -121,6 +147,5 @@ client_info get_client_info() {
 		cout << e.what();
 		exit(1);
 	}
-
 	return result;
 }

@@ -13,6 +13,8 @@ namespace Hex {
 	std::vector<char> hex_string_to_bytes(const std::string& hex); 
 }
 
+void copy_from_string_to_array(char array[], int len, const std::string& src, bool add_terminating_zero = false);
+
 struct client_info {
 	string server_ip;
 	string server_port;
