@@ -5,7 +5,6 @@
 #include <vector>
 #include <sstream>
 #include <exception>
-#include "Constants.h"
 #include "Utilities.h"
 
 using std::string;

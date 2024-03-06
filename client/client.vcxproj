@@ -135,7 +135,7 @@
     <ClInclude Include="AESWrapper.h" />
     <ClInclude Include="Base64Wrapper.h" />
     <ClInclude Include="checksum.h" />
-    <ClInclude Include="Constants.h" />
+    <ClInclude Include="Protocol.h" />
     <ClInclude Include="Requests.h" />
     <ClInclude Include="Responses.h" />
     <ClInclude Include="RSAWrapper.h" />
@@ -148,6 +148,7 @@
     <ClCompile Include="checksum.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Requests.cpp" />
+    <ClCompile Include="Responses.cpp" />
     <ClCompile Include="RSAWrapper.cpp" />
     <ClCompile Include="User.cpp" />
     <ClCompile Include="Utilities.cpp" />

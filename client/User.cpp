@@ -2,7 +2,7 @@
 #include <exception>
 #include <boost/asio.hpp>
 #include "User.h"
-#include "Constants.h"
+#include "Protocol.h"
 #include "Utilities.h"
 #include "Requests.h"
 #include "Responses.h"
@@ -40,6 +40,23 @@ User::User(string server_address, string server_port, string user_name, string f
 	
 	else
 		rsa_object = std::make_unique<RSAPrivateWrapper>();
+
+	get_file_name();
+
+}
+
+string User::get_file_name() {
+	int offset = 0;
+	int temp = this->file_path.find("\\", offset);
+
+	while(temp != std::string::npos) {
+		offset = temp;
+		temp = this->file_path.find("\\", offset);
+	}
+
+	string fname = this->file_path.substr(offset + 1);
+
+	copy_from_string_to_array(this->file_name, Constants::FILE_NAME_LENGTH, fname, true);
 }
 
 void User::start() {

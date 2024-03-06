@@ -1,13 +1,15 @@
 #pragma once
 #include <iostream>
 #include <cstdlib>
-#include "Constants.h"
+#include "Protocol.h"
 
 class ResponseHeader {
 public:
 	char version;
 	uint16_t code;
 	uint32_t payload_size;
+
+	ResponseHeader() : version(0), code(0), payload_size(0) { }
 };
 
 class Response {
@@ -32,7 +34,6 @@ public:
 	char client_id[Constants::CLIENT_ID_LENGTH];
 	char EncryptedAESKey[Constants::NUM_OF_BYTES_IN_AES_KEY];
 };
-
 
 class FileRecieved: public Response {
 public:

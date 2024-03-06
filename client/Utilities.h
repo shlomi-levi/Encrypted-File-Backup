@@ -3,7 +3,7 @@
 #define UTILITIES
 
 #include <vector>
-#include "Constants.h"
+#include "Protocol.h"
 
 using std::string;
 
