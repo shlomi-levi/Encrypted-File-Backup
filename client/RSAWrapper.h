@@ -9,7 +9,7 @@ class RSAPublicWrapper
 {
 public:
 	static const unsigned int KEYSIZE = 160;
-	static const unsigned int BITS = Constants::NUM_OF_BITS_IN_RSA_KEY;
+	static const unsigned int BITS = Constants::Sizes_In_Bits::RSA_KEY;
 
 private:
 	CryptoPP::AutoSeededRandomPool _rng;
@@ -34,7 +34,7 @@ public:
 class RSAPrivateWrapper
 {
 public:
-	static const unsigned int BITS = Constants::NUM_OF_BITS_IN_RSA_KEY;
+	static const unsigned int BITS = Constants::Sizes_In_Bits::RSA_KEY;
 
 private:
 	CryptoPP::AutoSeededRandomPool _rng;

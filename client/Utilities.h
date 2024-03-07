@@ -8,7 +8,7 @@
 using std::string;
 
 namespace Hex {
-	string bytes_to_hex_string(const char* bytes, size_t length = Constants::CLIENT_ID_LENGTH);
+	string bytes_to_hex_string(const char* bytes, size_t length = Constants::Sizes_In_Bytes::CLIENT_ID);
 	
 	std::vector<char> hex_string_to_bytes(const std::string& hex); 
 }
@@ -21,6 +21,7 @@ struct client_info {
 	string client_name;
 	string file_path;
 	string UUID;
+	string private_key_base64;
 	string private_key;
 };
 

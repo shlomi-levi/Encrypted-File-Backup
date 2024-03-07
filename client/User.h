@@ -1,19 +1,25 @@
 #pragma once
 #include <iostream>
+#include <boost/asio.hpp>
 #include "AESWrapper.h"
 #include "RSAWrapper.h"
 
 using std::string;
 using std::unique_ptr;
+using boost::asio::ip::tcp;
 
 class User {
 private:
 	string get_file_name();
+	void try_relogin(tcp::socket& s);
+	void register_user(tcp::socket& s);
 
 public:
-	char name[Constants::CLIENT_NAME_LENGTH];
-	char uuid[Constants::CLIENT_ID_LENGTH];
-	char file_name[Constants::FILE_NAME_LENGTH];
+	bool has_uuid;
+
+	char name[Constants::Sizes_In_Bytes::CLIENT_NAME];
+	char uuid[Constants::Sizes_In_Bytes::CLIENT_ID];
+	char file_name[Constants::Sizes_In_Bytes::FILE_NAME];
 
 	string file_path;
 	string server_address;

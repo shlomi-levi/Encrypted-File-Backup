@@ -6,6 +6,7 @@
 #include <sstream>
 #include <exception>
 #include "Utilities.h"
+#include "Base64Wrapper.h"
 
 using std::string;
 using std::cout;
@@ -13,7 +14,7 @@ using std::endl;
 using boost::algorithm::hex;
 
 namespace Hex {
-	string bytes_to_hex_string(const char* bytes, size_t length = Constants::CLIENT_ID_LENGTH) {
+	string bytes_to_hex_string(const char* bytes, size_t length = Constants::Sizes_In_Bytes::CLIENT_ID) {
 		std::string str;
 		hex(bytes, bytes + length, std::back_inserter(str));
 		return str;
@@ -56,11 +57,11 @@ void copy_from_string_to_array(char array[], int len, const std::string& src, bo
 		array[i] = '\0';
 }
 
-client_info get_client_info() {
-	client_info result;
-	
-	result.UUID = "";
-	result.private_key = "";
+void read_transfer_file(client_info& result) {
+	if(!std::filesystem::exists(Constants::TRANSFER_FILE_PATH)) {
+		throw std::logic_error(Constants::TRANSFER_FILE_PATH + "doesnt exist.");
+		exit(1);
+	}
 
 	std::ifstream f;
 	string server_details;
@@ -71,7 +72,7 @@ client_info get_client_info() {
 		f.open(Constants::TRANSFER_FILE_PATH, std::ios::in);
 
 		if(!f.is_open()) {
-			cout << "Couldn't open the file " << Constants::TRANSFER_FILE_PATH << endl;
+			throw std::logic_error("Couldn't open the file " + Constants::TRANSFER_FILE_PATH);
 			exit(1);
 		}
 
@@ -79,7 +80,7 @@ client_info get_client_info() {
 
 		for(string* var : variables) {
 			if(!std::getline(f, line)) {
-				cout << Constants::TRANSFER_FILE_PATH << " is not according to format." << endl;
+				throw std::logic_error(Constants::TRANSFER_FILE_PATH + " is not according to format.");
 				exit(1);
 			}
 
@@ -91,7 +92,7 @@ client_info get_client_info() {
 		size_t colon_pos = server_details.find(':');
 
 		if(colon_pos == string::npos) {
-			cout << Constants::TRANSFER_FILE_PATH << " is not according to format.missing colon on server address part." << endl;
+			throw std::logic_error(Constants::TRANSFER_FILE_PATH + " is not according to format.missing colon on server address part.");
 			exit(1);
 		}
 
@@ -106,14 +107,10 @@ client_info get_client_info() {
 		cout << e.what();
 		exit(1);
 	}
+}
 
-	if(!std::filesystem::exists(result.file_path)) {
-		cout << "File to transfer (" << result.file_path << ") doesnt exist in path." << endl;
-		exit(1);
-	}
-
-	if(!std::filesystem::exists(Constants::ME_FILE_PATH))
-		return result;
+void read_me_file(client_info& result) {
+	std::ifstream f;
 
 	try {
 		std::string line;
@@ -125,7 +122,7 @@ client_info get_client_info() {
 			exit(1);
 		}
 
-		string* variables[] = {&result.client_name, &result.UUID};
+		string* variables[] = {&result.client_name, &result.UUID, &result.private_key_base64};
 
 		for(string* var : variables) {
 			if(!std::getline(f, line)) {
@@ -146,5 +143,65 @@ client_info get_client_info() {
 		cout << e.what();
 		exit(1);
 	}
+}
+
+void read_priv_key_file(client_info& result) {
+	std::ifstream f;
+
+	try {
+		f.open(Constants::PRIV_KEY_PATH, std::ios::in);
+
+		if(!f.is_open()) {
+			throw std::logic_error("The file " << Constants::PRIV_KEY_PATH << " exists, but the system could not open it.");
+			exit(1);
+		}
+
+
+		if(!std::getline(f, result.private_key)) {
+			throw std::logic_error(Constants::PRIV_KEY_PATH + " is not according to format.");
+			exit(1);
+		}
+
+		f.close();
+	}
+
+	catch(const std::exception& e) {
+		if(f.is_open())
+			f.close();
+
+		cout << e.what();
+		exit(1);
+	}
+}
+
+client_info get_client_info() {
+	client_info result;
+	
+	result.UUID = "";
+	result.private_key_base64 = "";
+	result.private_key = "";
+	
+	read_transfer_file(result);
+
+	if(!std::filesystem::exists(result.file_path)) {
+		cout << "File to transfer (" << result.file_path << ") not found." << endl;
+		exit(1);
+	}
+
+	if(!std::filesystem::exists(Constants::ME_FILE_PATH))
+		return result;
+
+	read_me_file(result);
+
+	if(!std::filesystem::exists(Constants::PRIV_KEY_PATH)) {
+		throw std::logic_error(Constants::ME_FILE_PATH + "exists, but " + Constants::PRIV_KEY_PATH + " doesnt exist.");
+		exit(1);
+	}
+
+	read_priv_key_file(result);
+
+	if(result.private_key != Base64Wrapper::decode(result.private_key_base64))
+		throw std::logic_error("Private key in " + Constants::PRIV_KEY_PATH + " is different than the one in " + Constants::ME_FILE_PATH);
+	
 	return result;
 }

@@ -2,32 +2,53 @@
 #ifndef PROTOCOL
 #define PROTOCOL
 #include <iostream>
+#include <string>
+#include <cstdint>
 
 using std::string;
 
 namespace Constants {
-	constexpr char CLIENT_VERSION = '3';
-	constexpr int CLIENT_ID_LENGTH = 16;
-	constexpr int CLIENT_NAME_LENGTH = 255;
-	constexpr int NUM_OF_BITS_IN_RSA_KEY = 1024;
-	constexpr int NUM_OF_BITS_IN_AES_KEY = 256;
-	constexpr int NUM_OF_BYTES_IN_AES_KEY = NUM_OF_BITS_IN_AES_KEY / 8;
-	constexpr int PUBLIC_KEY_LENGTH_IN_BYTES = 128;
-	constexpr int FILE_NAME_LENGTH = 255;
-	constexpr int CONTENT_SIZE_LENGTH_IN_BYTES = 4;
-	constexpr int ORIGINAL_FILE_SIZE_LENGTH_IN_BYTES = 4;
-	constexpr int PACKET_NUMBER_LENGTH_IN_BYTES = 2;
-	constexpr int TOTAL_PACKETS_LENGTH_IN_BYTES = 2;
-	constexpr int CHECKSUM_SIZE_IN_BYTES = 4;
+	namespace Sizes_In_Bits {
+		constexpr int RSA_KEY = 1024;
+		constexpr int AES_KEY = 256;
+	};
 
-	constexpr int BUFFER_SIZE_FILE_TRANSFER = 4000;
+	namespace Sizes_In_Bytes {
+		constexpr int CLIENT_VERSION = 1;
+		constexpr int CLIENT_ID = 16;
+		constexpr int CLIENT_NAME = 255;
+
+		constexpr int PUBLIC_KEY = 128;
+		constexpr int AES_KEY = Sizes_In_Bits::AES_KEY / 8;
+
+
+		constexpr int FILE_NAME = 255;
+		constexpr int FILE_CONTENT_SIZE = 4;
+		constexpr int FILE_CONTENT_ORIGINAL_SIZE = 4;
+		constexpr int FILE_TRANSFER_BUFFER = 4000;
+		constexpr int CHECKSUM = 4;
+
+		constexpr int PACKET_NUMBER = 2;
+		constexpr int TOTAL_PACKETS = 2;
+	};
+
+	constexpr int8_t CLIENT_VERSION = 3;
+
+	static_assert(sizeof(CLIENT_VERSION) == Sizes_In_Bytes::CLIENT_VERSION, "Client version constant has the wrong type. check Constants::SIZES_IN_BYTES::CLIENT_VERSION in 'Protocol.h' to see how many bytes it should have.");
 
 	const string ME_FILE_PATH = "me.info";
+	const string PRIV_KEY_PATH = "priv.key";
 	const string TRANSFER_FILE_PATH = "transfer.info";
 
-	constexpr char EMPTY_STRING[CLIENT_NAME_LENGTH] = { 0 };
+	constexpr char EMPTY_NAME[Sizes_In_Bytes::CLIENT_NAME] = { 0 };
 
 	namespace Requests {
+		constexpr int REQUEST_CODE_SIZE = 2;
+		constexpr int REQUEST_PAYLOAD_SIZE = 4;
+
+		constexpr int HEADER_SIZE = Sizes_In_Bytes::CLIENT_ID + Sizes_In_Bytes::CLIENT_VERSION +
+			REQUEST_CODE_SIZE + REQUEST_PAYLOAD_SIZE;
+
 		enum codes {
 			Registration = 1025,
 			PublicKeyTransfer = 1026,
@@ -39,18 +60,27 @@ namespace Constants {
 		};
 
 		enum payload_sizes {
-			Registration = CLIENT_NAME_LENGTH,
-			PublicKeyTransfer = CLIENT_NAME_LENGTH + PUBLIC_KEY_LENGTH_IN_BYTES,
-			Relogin = CLIENT_NAME_LENGTH,
-			FileTransfer = CONTENT_SIZE_LENGTH_IN_BYTES + ORIGINAL_FILE_SIZE_LENGTH_IN_BYTES + PACKET_NUMBER_LENGTH_IN_BYTES + TOTAL_PACKETS_LENGTH_IN_BYTES + FILE_NAME_LENGTH + BUFFER_SIZE_FILE_TRANSFER,
+			Registration = Sizes_In_Bytes::CLIENT_NAME,
+			PublicKeyTransfer = Sizes_In_Bytes::CLIENT_NAME + Sizes_In_Bytes::PUBLIC_KEY,
+			Relogin = Sizes_In_Bytes::CLIENT_NAME,
 
-			ValidCRC = CLIENT_NAME_LENGTH,
-			InvalidCRC = CLIENT_NAME_LENGTH,
-			InvalidCRCFourthTime = CLIENT_NAME_LENGTH
+			FileTransfer = Sizes_In_Bytes::FILE_CONTENT_SIZE + Sizes_In_Bytes::FILE_CONTENT_ORIGINAL_SIZE +
+			Sizes_In_Bytes::PACKET_NUMBER + Sizes_In_Bytes::TOTAL_PACKETS + Sizes_In_Bytes::FILE_NAME +
+			Sizes_In_Bytes::FILE_TRANSFER_BUFFER,
+
+			ValidCRC = Sizes_In_Bytes::CLIENT_NAME,
+			InvalidCRC = Sizes_In_Bytes::CLIENT_NAME,
+			InvalidCRCFourthTime = Sizes_In_Bytes::CLIENT_NAME
 		};
 	};
 
 	namespace Responses {
+		constexpr int RESPONSE_CODE_SIZE = 2;
+		constexpr int RESPONSE_VERSION_SIZE = 1;
+		constexpr int RESPONSE_PAYLOAD_SIZE = 4;
+		
+		constexpr int HEADER_SIZE = RESPONSE_VERSION_SIZE + RESPONSE_CODE_SIZE + RESPONSE_PAYLOAD_SIZE;
+
 		enum codes {
 			RegistrationSucceeded = 1600,
 			RegistrationFailed = 1601,
@@ -63,14 +93,16 @@ namespace Constants {
 		};
 		
 		enum payload_sizes {
-			RegistrationSuccedded = CLIENT_ID_LENGTH,
+			RegistrationSuccedded = Sizes_In_Bytes::CLIENT_ID,
 			RegistrationFailed = 0,
-			PublicKeyRecieved = CLIENT_ID_LENGTH + NUM_OF_BYTES_IN_AES_KEY,
-			FileRecievedValidCRC = CLIENT_ID_LENGTH + CONTENT_SIZE_LENGTH_IN_BYTES + FILE_NAME_LENGTH + CHECKSUM_SIZE_IN_BYTES,
+			PublicKeyRecieved = Sizes_In_Bytes::CLIENT_ID + Sizes_In_Bytes::AES_KEY,
+			
+			FileRecievedValidCRC = Sizes_In_Bytes::CLIENT_ID + Sizes_In_Bytes::FILE_CONTENT_SIZE
+			+ Sizes_In_Bytes::FILE_NAME + Sizes_In_Bytes::CHECKSUM,
 
-			MessageRecieved = CLIENT_ID_LENGTH,
-			ReloginApproved = CLIENT_ID_LENGTH + NUM_OF_BYTES_IN_AES_KEY,
-			ReloginDenied = CLIENT_ID_LENGTH,
+			MessageRecieved = Sizes_In_Bytes::CLIENT_ID,
+			ReloginApproved = Sizes_In_Bytes::CLIENT_ID + Sizes_In_Bytes::AES_KEY,
+			ReloginDenied = Sizes_In_Bytes::CLIENT_ID,
 			GeneralServerError = 0
 		};
 	}

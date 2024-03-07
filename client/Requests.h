@@ -10,7 +10,7 @@ using std::vector;
 class RequestHeader {
 public:
 	RequestHeader() {}
-	char client_id[Constants::CLIENT_ID_LENGTH];
+	char client_id[Constants::Sizes_In_Bytes::CLIENT_ID];
 	uint8_t version;
 	uint16_t code;
 	uint32_t payload_size;
@@ -22,10 +22,6 @@ class Request {
 public:
 	RequestHeader header;
 
-	virtual string pack() = 0;
-
-	// virtual static Request create_request_from_payload(RequestHeader, )
-
 protected:
 	Request() {}
 };
@@ -33,21 +29,21 @@ protected:
 class Registration: public Request {
 public:
 	Registration(const User& u);
-	char client_name[Constants::CLIENT_NAME_LENGTH];
+	char client_name[Constants::Sizes_In_Bytes::CLIENT_NAME];
 
 };
 
 class PublicKeyTransfer: public Request {
 public:
 	PublicKeyTransfer(const User& u);
-	char client_name[Constants::CLIENT_NAME_LENGTH];
-	char public_key[Constants::PUBLIC_KEY_LENGTH_IN_BYTES];
+	char client_name[Constants::Sizes_In_Bytes::CLIENT_NAME];
+	char public_key[Constants::Sizes_In_Bytes::PUBLIC_KEY];
 };
 
 class Relogin: public Request {
 public:
 	Relogin(const User& u);
-	char client_name[Constants::CLIENT_NAME_LENGTH];
+	char client_name[Constants::Sizes_In_Bytes::CLIENT_NAME];
 };
 
 class FileTransfer: public Request {
@@ -58,25 +54,25 @@ public:
 	uint32_t original_file_size;
 	uint16_t packet_number;
 	uint16_t total_packets;
-	char file_name[Constants::FILE_NAME_LENGTH];
-	char message_content[Constants::BUFFER_SIZE_FILE_TRANSFER];
+	char file_name[Constants::Sizes_In_Bytes::FILE_NAME];
+	char message_content[Constants::Sizes_In_Bytes::FILE_TRANSFER_BUFFER];
 };
 
 class ValidCRC: public Request {
 public:
 	ValidCRC(const User& u);
-	char file_name[Constants::FILE_NAME_LENGTH];
+	char file_name[Constants::Sizes_In_Bytes::FILE_NAME];
 };
 
 class InvalidCRC: public Request {
 public:
 	InvalidCRC(const User& u);
-	char file_name[Constants::FILE_NAME_LENGTH];
+	char file_name[Constants::Sizes_In_Bytes::FILE_NAME];
 };
 
 class InvalidCRCFourthTime: public Request {
 public:
 	InvalidCRCFourthTime(const User& u);
-	char file_name[Constants::FILE_NAME_LENGTH];
+	char file_name[Constants::Sizes_In_Bytes::FILE_NAME];
 };
 		
