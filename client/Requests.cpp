@@ -4,11 +4,26 @@
 #include "Utilities.h"
 #include "User.h"
 
+RequestHeader& RequestHeader::operator=(const RequestHeader& other) {
+	if(this == &other)
+		return *this;
+
+	std::copy(other.client_id, other.client_id + Constants::Sizes_In_Bytes::CLIENT_ID, client_id);
+	version = other.version;
+	code = other.code;
+	payload_size = other.payload_size;
+}
+
 void RequestHeader::init(const char client_id[], uint16_t code, uint32_t payload_size) {
 	std::copy(client_id, client_id + Constants::Sizes_In_Bytes::CLIENT_ID, this->client_id);
 	this->version = Constants::CLIENT_VERSION;
 	this->code = code;
 	this->payload_size = payload_size;
+
+	if(!Endian::is_little_endian()) {
+		Endian::flip_endianness(this->code);
+		Endian::flip_endianness(this->payload_size);
+	}
 }
 
 Registration::Registration(const User& u) {
@@ -41,6 +56,13 @@ FileTransfer::FileTransfer(const User& u, uint32_t content_size, uint32_t origin
 
 	std::copy(this->file_name, this->file_name + Constants::Sizes_In_Bytes::FILE_NAME, u.file_name);
 	copy_from_string_to_array(this->message_content, Constants::Sizes_In_Bytes::FILE_TRANSFER_BUFFER, message_content, true);
+
+	if(!Endian::is_little_endian()) {
+		Endian::flip_endianness(this->content_size);
+		Endian::flip_endianness(this->original_file_size);
+		Endian::flip_endianness(this->packet_number);
+		Endian::flip_endianness(this->total_packets);
+	}
 }
 
 ValidCRC::ValidCRC(const User& u) {

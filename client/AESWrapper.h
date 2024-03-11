@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include "Constants.h"
+#include "Protocol.h"
 
 
 class AESWrapper

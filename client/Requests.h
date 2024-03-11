@@ -16,6 +16,8 @@ public:
 	uint32_t payload_size;
 
 	void init(const char client_id[], uint16_t code, uint32_t payload_size);
+
+	RequestHeader& operator=(const RequestHeader& other);
 };
 
 class Request {

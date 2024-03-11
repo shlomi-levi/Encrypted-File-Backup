@@ -13,14 +13,19 @@ public:
 	uint32_t payload_size;
 
 	ResponseHeader() : version(0), code(0), payload_size(0) { }
+
+	ResponseHeader& operator=(const ResponseHeader& other);
 };
+
 
 class Response {
 public:
 	ResponseHeader header;
 	
-protected:
+public:
 	Response() { }
+	static std::unique_ptr<Response> get_response(tcp::socket& s);
+	virtual ~Response() { }
 };
 
 class RegistrationSuccess: public Response {
@@ -57,11 +62,11 @@ public:
 	char EncryptedAESKey[Constants::Sizes_In_Bytes::AES_KEY];
 };
 
-class DeclineRelogin {
+class DeclineRelogin: public Response {
 public:
 	char client_id[Constants::Sizes_In_Bytes::CLIENT_ID];
 };
 
-class GeneralServerError {
+class GeneralServerError: public Response {
 
 };

@@ -82,27 +82,27 @@ namespace Constants {
 		constexpr int HEADER_SIZE = RESPONSE_VERSION_SIZE + RESPONSE_CODE_SIZE + RESPONSE_PAYLOAD_SIZE;
 
 		enum codes {
-			RegistrationSucceeded = 1600,
-			RegistrationFailed = 1601,
+			RegistrationSuccess = 1600,
+			RegistrationFailure = 1601,
 			PublicKeyRecieved = 1602,
-			FileRecievedValidCRC = 1603,
+			FileRecieved = 1603,
 			MessageRecieved = 1604,
-			ReloginApproved = 1605,
-			ReloginDenied = 1606,
-			GeneralServerError = 1606
+			AllowRelogin = 1605,
+			DeclineRelogin = 1606,
+			GeneralServerError = 1607
 		};
 		
 		enum payload_sizes {
 			RegistrationSuccedded = Sizes_In_Bytes::CLIENT_ID,
-			RegistrationFailed = 0,
+			RegistrationFailure = 0,
 			PublicKeyRecieved = Sizes_In_Bytes::CLIENT_ID + Sizes_In_Bytes::AES_KEY,
 			
-			FileRecievedValidCRC = Sizes_In_Bytes::CLIENT_ID + Sizes_In_Bytes::FILE_CONTENT_SIZE
+			FileRecieved = Sizes_In_Bytes::CLIENT_ID + Sizes_In_Bytes::FILE_CONTENT_SIZE
 			+ Sizes_In_Bytes::FILE_NAME + Sizes_In_Bytes::CHECKSUM,
 
 			MessageRecieved = Sizes_In_Bytes::CLIENT_ID,
-			ReloginApproved = Sizes_In_Bytes::CLIENT_ID + Sizes_In_Bytes::AES_KEY,
-			ReloginDenied = Sizes_In_Bytes::CLIENT_ID,
+			AllowRelogin = Sizes_In_Bytes::CLIENT_ID + Sizes_In_Bytes::AES_KEY,
+			DeclineRelogin = Sizes_In_Bytes::CLIENT_ID,
 			GeneralServerError = 0
 		};
 	}

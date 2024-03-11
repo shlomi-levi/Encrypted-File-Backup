@@ -3,7 +3,7 @@
 #include <osrng.h>
 #include <rsa.h>
 #include <string>
-#include "Constants.h"
+#include "Protocol.h"
 
 class RSAPublicWrapper
 {

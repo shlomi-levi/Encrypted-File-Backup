@@ -73,12 +73,7 @@ void User::register_user(tcp::socket& s) {
 	Registration registration_req {*this};
 	boost::asio::write(s, boost::asio::buffer(&registration_req, sizeof(registration_req)));
 
-	ResponseHeader r;
-	boost::asio::read(s, boost::asio::buffer(&r, sizeof(r)));
-
-	Response res = Response::get_response(s);
-	
-	// Todo: continue this
+	Response* res = Response::get_response(s).get();
 }
 
 void User::start() {

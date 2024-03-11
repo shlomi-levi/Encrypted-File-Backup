@@ -13,6 +13,13 @@ namespace Hex {
 	std::vector<char> hex_string_to_bytes(const std::string& hex); 
 }
 
+namespace Endian {
+	bool is_little_endian();
+
+	template <typename intType>
+	void flip_endianness(intType& src);
+}
+
 void copy_from_string_to_array(char array[], int len, const std::string& src, bool add_terminating_zero = false);
 
 struct client_info {
