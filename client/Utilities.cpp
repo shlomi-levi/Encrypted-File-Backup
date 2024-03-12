@@ -46,8 +46,6 @@ namespace Endian {
 	}
 }
 
-
-
 void copy_from_string_to_array(char array[], int len, const std::string& src, bool add_terminating_zero=false) {
 	static int src_string_len;
 	static int i;

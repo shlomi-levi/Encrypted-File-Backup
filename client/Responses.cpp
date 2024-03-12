@@ -12,7 +12,7 @@ ResponseHeader& ResponseHeader::operator=(const ResponseHeader& other) {
 	return *this;
 }
 
-std::unique_ptr<Response> Response::get_response(tcp::socket& s) {
+std::unique_ptr<Response> Response::get_response(tcp::socket& s, User* u=nullptr) {
 	ResponseHeader header;
 	boost::asio::read(s, boost::asio::buffer(&header, sizeof(header)));
 	
@@ -61,15 +61,45 @@ std::unique_ptr<Response> Response::get_response(tcp::socket& s) {
 		case Constants::Responses::codes::GeneralServerError:
 			res = std::make_unique<GeneralServerError>();
 			break;
+
+		case default:
+			// Todo: throw error.
 	}
 
 	res->header = header;
 
-	boost::asio::read(s, boost::asio::buffer(res.get() + sizeof(ResponseHeader), sizeof(sizeofTable.at(header.code)) - sizeof(ResponseHeader)));
+	if(header.code == Constants::Responses::codes::PublicKeyRecieved) {
+		PublicKeyRecieved* pkr = static_cast<PublicKeyRecieved*>(res.get());
+
+		boost::asio::read(s, boost::asio::buffer(pkr->client_id, Constants::Sizes_In_Bytes::CLIENT_ID));
+
+		// Todo: debug this part to see it works correctly:
+		int encrypted_aes_key_length = res->header.payload_size - Constants::Sizes_In_Bytes::CLIENT_ID;
+		std::vector<char> encrypted_aes_key_vector(encrypted_aes_key_length);
+
+		boost::asio::read(s, boost::asio::buffer(&encrypted_aes_key_vector, encrypted_aes_key_length));
+
+		// Copy from the vector to a string
+		string encrypted_aes_key_string = "";
+		for(int i = 0 ; i < encrypted_aes_key_vector.size() ; i++)
+			encrypted_aes_key_string += encrypted_aes_key_vector[i];
+
+		string decrypted_aes_key = u->rsa_object->decrypt(encrypted_aes_key_string);
+		
+		if(decrypted_aes_key.size() != Constants::Sizes_In_Bytes::AES_KEY) {
+			// Todo: Throw error that the encrypted size doesn't match the aes_key size.
+		}
+
+		copy_from_string_to_array(pkr->decrypted_aes_key, Constants::Sizes_In_Bytes::AES_KEY, decrypted_aes_key);
+	}
+	
+	else {
+		boost::asio::read(s, boost::asio::buffer(res.get() + sizeof(ResponseHeader), sizeof(sizeofTable.at(header.code)) - sizeof(ResponseHeader)));
+	}
 
 	if(!Endian::is_little_endian()) {
 		if(header.code == Constants::Responses::codes::FileRecieved) { // the order is important because we flip header.code next. keep this if statement here.
-			FileRecieved* temp = (FileRecieved*) res.get();
+			FileRecieved* temp = static_cast<FileRecieved*>(res.get());
 			Endian::flip_endianness(temp->content_size);
 			Endian::flip_endianness(temp->checksum);
 		}

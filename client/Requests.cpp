@@ -47,7 +47,8 @@ Relogin::Relogin(const User& u) {
 	std::copy(u.name, u.name + Constants::Sizes_In_Bytes::CLIENT_NAME, this->client_name);
 }
 
-FileTransfer::FileTransfer(const User& u, uint32_t content_size, uint32_t original_file_size, uint16_t packet_number, uint16_t total_packets, const std::string& message_content) {
+FileTransfer::FileTransfer(const User& u, uint32_t content_size, uint32_t original_file_size, uint16_t packet_number, uint16_t total_packets) {
+
 	this->header.init(u.uuid, Constants::Requests::codes::FileTransfer, Constants::Requests::payload_sizes::FileTransfer);
 	this->content_size = content_size;
 	this->original_file_size = original_file_size;
@@ -55,7 +56,6 @@ FileTransfer::FileTransfer(const User& u, uint32_t content_size, uint32_t origin
 	this->total_packets = total_packets;
 
 	std::copy(this->file_name, this->file_name + Constants::Sizes_In_Bytes::FILE_NAME, u.file_name);
-	copy_from_string_to_array(this->message_content, Constants::Sizes_In_Bytes::FILE_TRANSFER_BUFFER, message_content, true);
 
 	if(!Endian::is_little_endian()) {
 		Endian::flip_endianness(this->content_size);

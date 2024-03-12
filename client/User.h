@@ -11,8 +11,10 @@ using boost::asio::ip::tcp;
 class User {
 private:
 	string get_file_name();
-	void try_relogin(tcp::socket& s);
-	void register_user(tcp::socket& s);
+	void handle_relogin(tcp::socket& s);
+	void handle_registration(tcp::socket& s);
+	void handle_public_key_transfer(tcp::socket& s);
+	void handle_file_transfer(tcp::socket& s);
 
 public:
 	bool has_uuid;

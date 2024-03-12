@@ -1,6 +1,7 @@
 #include <iostream>
+#include <filesystem>
+#include <fstream>
 #include <exception>
-
 #include "User.h"
 #include "Protocol.h"
 #include "Utilities.h"
@@ -8,6 +9,8 @@
 #include "Responses.h"
 #include "Base64Wrapper.h"
 #include "RSAWrapper.h"
+
+// Todo: add header guards for all header files (lo kashur la kovez haze)
 
 using std::cerr;
 using std::cout;
@@ -62,18 +65,98 @@ string User::get_file_name() {
 	copy_from_string_to_array(this->file_name, Constants::Sizes_In_Bytes::FILE_NAME, fname, true);
 }
 
-void User::try_relogin(tcp::socket& s) {
+void User::handle_relogin(tcp::socket& s) {
 	Relogin relogin_req {*this};
 	boost::asio::write(s, boost::asio::buffer(&relogin_req, sizeof(relogin_req)));
 
-	// Todo: continue this
+	std::unique_ptr<Response> res = Response::get_response(s);
+
+	if(res->header.code == Constants::Responses::codes::DeclineRelogin)
+		return handle_registration(s);
+
+	if(res->header.code == Constants::Responses::codes::GeneralServerError) {
+		// Todo: decide what to do in case of server error.
+	}
+
+	if(res->header.code == Constants::Responses::codes::AllowRelogin) {
+		AllowRelogin* relogin_response = static_cast<AllowRelogin*>(res.get());
+		aes_object = std::make_unique<AESWrapper>(relogin_response->EncryptedAESKey, Constants::Sizes_In_Bytes::AES_KEY);
+
+		std::copy(relogin_response->client_id, relogin_response->client_id + Constants::Sizes_In_Bytes::CLIENT_ID, uuid);
+
+		return;
+	}
 }
 
-void User::register_user(tcp::socket& s) {
+void User::handle_public_key_transfer(tcp::socket& s) {
+	PublicKeyTransfer public_key_transfer_req {*this};
+	boost::asio::write(s, boost::asio::buffer(&public_key_transfer_req, sizeof(public_key_transfer_req)));
+
+	unique_ptr<Response> res = Response::get_response(s);
+
+	if(res->header.code == Constants::Responses::codes::PublicKeyRecieved) {
+		PublicKeyRecieved* pkr = static_cast<PublicKeyRecieved*>(res.get());
+
+		aes_object = std::make_unique<AESWrapper>(pkr->decrypted_aes_key, Constants::Sizes_In_Bytes::AES_KEY);
+		return;
+	}
+
+	else if(res->header.code == Constants::Responses::codes::GeneralServerError) {
+		// Todo: throw error.
+	}
+}
+
+void User::handle_registration(tcp::socket& s) {
 	Registration registration_req {*this};
 	boost::asio::write(s, boost::asio::buffer(&registration_req, sizeof(registration_req)));
 
-	Response* res = Response::get_response(s).get();
+	unique_ptr<Response> res = Response::get_response(s);
+
+	if(res->header.code == Constants::Responses::codes::GeneralServerError) {
+		// Todo: decide what to do in case of Server Error.
+		return;
+	}
+
+	if(res->header.code == Constants::Responses::codes::RegistrationFailure) {
+		// Todo: decide what to do in case of registration failure
+		return;
+	}
+
+	if(res->header.code == Constants::Responses::codes::RegistrationSuccess) {
+		RegistrationSuccess* reg_success = static_cast<RegistrationSuccess*>(res.get());
+		std::copy(reg_success->client_id, reg_success->client_id + Constants::Sizes_In_Bytes::CLIENT_ID, uuid);
+		
+		return handle_public_key_transfer(s);
+	}
+}
+
+void User::handle_file_transfer(tcp::socket& s) {
+	std::ifstream f;
+
+	char buffer[Constants::Sizes_In_Bytes::FILE_TRANSFER_BUFFER];
+
+	try {
+		f.open(file_name, std::ios::in);
+
+		if(!f.is_open()) {
+			throw std::logic_error("Couldn't open the file " + Constants::TRANSFER_FILE_PATH);
+			exit(1);
+		}
+
+		int packet_count = 0;
+		int total_packets = ceil(std::filesystem::file_size(file_name) / Constants::Sizes_In_Bytes::FILE_TRANSFER_BUFFER);
+
+		while(!f.eof()) {
+			packet_count += 1;
+
+			f.read(buffer, Constants::Sizes_In_Bytes::FILE_TRANSFER_BUFFER);
+			string encrypted_text = aes_object->encrypt(buffer, f.gcount());
+
+			FileTransfer req {*this, encrypted_text.size(), f.gcount(), packet_count, total_packets};
+
+			boost::asio::write(s, boost::asio::buffer(&req, sizeof(FileTransfer)));
+			boost::asio::write(s, boost::asio::buffer(&encrypted_text, encrypted_text.size()));
+		}
 }
 
 void User::start() {
@@ -85,12 +168,13 @@ void User::start() {
 		boost::asio::connect(s, resolver.resolve(server_address, server_port));
 
 		if(has_uuid)
-			try_relogin(s);
+			handle_relogin(s);
 
 		else
-			register_user(s);
+			handle_registration(s);
 
-
+		// Now the client is logged in and has a key.
+		handle_file_transfer(s);
 		// Todo: continue this.
 	}
 

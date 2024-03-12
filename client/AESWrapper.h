@@ -7,7 +7,8 @@
 class AESWrapper
 {
 public:
-	static const unsigned int DEFAULT_KEYLENGTH = Constants::Sizes_In_Bits::AES_KEY / 8;
+	static const unsigned int DEFAULT_KEYLENGTH = Constants::Sizes_In_Bits::AES_KEY / 8; // byte is always 8 bits.
+
 private:
 	unsigned char _key[DEFAULT_KEYLENGTH];
 	AESWrapper(const AESWrapper& aes);

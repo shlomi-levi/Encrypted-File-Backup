@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <boost/asio.hpp>
 #include "Protocol.h"
+#include "User.h"
 
 using boost::asio::ip::tcp;
 
@@ -24,7 +25,7 @@ public:
 	
 public:
 	Response() { }
-	static std::unique_ptr<Response> get_response(tcp::socket& s);
+	static std::unique_ptr<Response> get_response(tcp::socket& s, User* u=nullptr);
 	virtual ~Response() { }
 };
 
@@ -40,7 +41,7 @@ class RegistrationFailure: public Response {
 class PublicKeyRecieved: public Response {
 public:
 	char client_id[Constants::Sizes_In_Bytes::CLIENT_ID];
-	char EncryptedAESKey[Constants::Sizes_In_Bytes::AES_KEY];
+	char decrypted_aes_key[Constants::Sizes_In_Bytes::AES_KEY];
 };
 
 class FileRecieved: public Response {

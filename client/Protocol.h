@@ -19,8 +19,7 @@ namespace Constants {
 		constexpr int CLIENT_NAME = 255;
 
 		constexpr int PUBLIC_KEY = 128;
-		constexpr int AES_KEY = Sizes_In_Bits::AES_KEY / 8;
-
+		constexpr int AES_KEY = Sizes_In_Bits::AES_KEY / 8; // byte is always 8 bits.
 
 		constexpr int FILE_NAME = 255;
 		constexpr int FILE_CONTENT_SIZE = 4;
@@ -59,6 +58,7 @@ namespace Constants {
 			InvalidCRCFourthTime = 1031
 		};
 
+		// TODO: CHECK IF I EVEN NEED THIS (I CAN MAYBE USE IT TO VERIFY RESPONSE PAYLOAD SIZES)
 		enum payload_sizes {
 			Registration = Sizes_In_Bytes::CLIENT_NAME,
 			PublicKeyTransfer = Sizes_In_Bytes::CLIENT_NAME + Sizes_In_Bytes::PUBLIC_KEY,
@@ -92,6 +92,7 @@ namespace Constants {
 			GeneralServerError = 1607
 		};
 		
+		// TODO: CHECK IF I EVEN NEED THIS (I CAN MAYBE USE IT TO VERIFY RESPONSE PAYLOAD SIZES)
 		enum payload_sizes {
 			RegistrationSuccedded = Sizes_In_Bytes::CLIENT_ID,
 			RegistrationFailure = 0,

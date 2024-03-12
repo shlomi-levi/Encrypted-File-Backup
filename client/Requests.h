@@ -50,14 +50,13 @@ public:
 
 class FileTransfer: public Request {
 public:
-	FileTransfer(const User& u, uint32_t content_size, uint32_t original_file_size, uint16_t packet_number, uint16_t total_packets, const std::string& message_content);
+	FileTransfer(const User& u, uint32_t content_size, uint32_t original_file_size, uint16_t packet_number, uint16_t total_packets);
 
 	uint32_t content_size;
 	uint32_t original_file_size;
 	uint16_t packet_number;
 	uint16_t total_packets;
 	char file_name[Constants::Sizes_In_Bytes::FILE_NAME];
-	char message_content[Constants::Sizes_In_Bytes::FILE_TRANSFER_BUFFER];
 };
 
 class ValidCRC: public Request {
