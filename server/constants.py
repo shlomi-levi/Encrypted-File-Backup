@@ -1,10 +1,25 @@
-from enum import Enum
+# from enum import Enum
 
 SERVER_VERSION = 3
 SYMMETRIC_AES_KEY_LENGTH = 32
 Client_ID_Length = 16
+PORT_INFO_FILE = 'port.info'
+DEFAULT_PORT = 1256
 
-class ResponseCodes(Enum):
+class FieldsSizes:
+    CLIENT_ID = 16
+    CLIENT_NAME = 255
+    SERVER_VERSION = 1
+    CODE = 2
+    PAYLOAD_SIZE = 4
+    PUBLIC_KEY = 160
+    CONTENT_SIZE = 4
+    ORIGINAL_CONTENT_SIZE = 4
+    PACKET_NUMBER = 2
+    TOTAL_PACKETS = 2
+    CKSUM = 4
+
+class ResponseCodes:
     RegistrationSuccess = 1600
     RegistrationFailure = 1601
     PublicKeyRecieved = 1602
@@ -14,7 +29,7 @@ class ResponseCodes(Enum):
     DeclineRelogin = 1606
     GeneralServerError = 1607
 
-class Request_Codes(Enum):
+class RequestCodes:
     REGISTRATION = 1025
     PUBLIC_KEY_TRANSFER = 1026
     RELOGIN = 1027

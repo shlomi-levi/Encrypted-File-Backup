@@ -1,29 +1,21 @@
+from server import Server
+import constants
 
 def main():
     PORT:int
 
     try:
-        f = open('port.info', 'r')
+        f = open(constants.PORT_INFO_FILE, 'r')
         PORT = int(f.read())
-
         f.close()
 
     except OSError:
-        print("port.info file could not be opened")
-        PORT = 1256
+        print(f"{constants.PORT_INFO_FILE} file could not be opened")
+        PORT = constants.DEFAULT_PORT
 
-    # add check db
-
-    
-
-
-
-
-    if
-
-
-
-
+    # todo: add check db
+    s = Server(PORT)
+    s.start()
 
 
 if __name__ == "__main__":

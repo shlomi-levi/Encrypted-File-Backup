@@ -9,8 +9,13 @@ from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 
+# TODO: GO OVER ALL HANDLERS AGAIN TO SEE I DIDNT MISS SOMETHING.
+
 class Server:
     users_map:dict[uuid, User]
+    PORT:int
+    def __init__(self, PORT):
+        self.PORT = PORT
 
     def wait_for_requests(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -22,17 +27,17 @@ class Server:
             req:Requests.Request = Requests.parse_request(conn)
 
             handler_dict = {
-                Request_Codes.REGISTRATION : self.handle_registration_request,
-                Request_Codes.PUBLIC_KEY_TRANSFER: self.handle_public_key_transfer_request,
-                Request_Codes.RELOGIN: self.handle_relogin_request,
-                Request_Codes.FILETRANSFER: self.handle_file_transfer_request,
-                Request_Codes.VALIDCRC: self.handle_valid_crc_reqeust,
-                Request_Codes.INVALIDCRC: self.handle_invalid_crc_request,
-                Request_Codes.INVALIDCRCFOURTHTIME: self.handle_invalid_crc_fourth_time_request
+                RequestCodes.REGISTRATION : self.handle_registration_request,
+                RequestCodes.PUBLIC_KEY_TRANSFER: self.handle_public_key_transfer_request,
+                RequestCodes.RELOGIN: self.handle_relogin_request,
+                RequestCodes.FILETRANSFER: self.handle_file_transfer_request,
+                RequestCodes.VALIDCRC: self.handle_valid_crc_reqeust,
+                RequestCodes.INVALIDCRC: self.handle_invalid_crc_request,
+                RequestCodes.INVALIDCRCFOURTHTIME: self.handle_invalid_crc_fourth_time_request
             }
 
             response = handler_dict[req.header.code](req) # type:ignore
-            # TODO: send response back.
+            sock.sendall(response.pack())
 
     def start(self):
         self.wait_for_requests()
@@ -49,24 +54,20 @@ class Server:
 
         return res
 
-    def handle_public_key_transfer_request(self, req:Requests.PublicKeyTransfer):
+    def handle_public_key_transfer_request(self, req:Requests.PublicKeyTransfer) -> Responses.Response:
         if req.header.client_id not in self.users_map:
-            # todo: Return error response or something (maybe response 1606, ask in forum)
+            return Responses.GeneralServerError()
 
         u:User = self.users_map[req.header.client_id]
         u.public_key = req.public_key
 
-        session_key = get_random_bytes(SYMMETRIC_AES_KEY_LENGTH)
-        rsa = RSA.importKey(req.public_key)
-        cipher_rsa = PKCS1_OAEP.new(rsa)
-        encrypted_aes = cipher_rsa.encrypt(session_key)
+        aes_key = get_random_bytes(SYMMETRIC_AES_KEY_LENGTH)
+        u.aes_key = aes_key
 
+        rsa_encrypter = PKCS1_OAEP.new(RSA.importKey(req.public_key))
+        encrypted_aes_key:bytes = rsa_encrypter.encrypt(aes_key)
 
-        u.symmetric_AES_key = encrypted_aes
-
-        res = Responses.PublicKeyRecieved(Requests.Header_Client_Id_Size + SYMMETRIC_AES_KEY_LENGTH, req.header.client_id, encrypted_aes)
-
-        return res
+        return Responses.PublicKeyRecieved(req.header.client_id, encrypted_aes_key)
 
     def handle_relogin_request(self, req:Requests.Relogin) -> Responses.Response:
         cid = req.header.client_id
@@ -74,9 +75,11 @@ class Server:
         if cid not in self.users_map or not self.users_map[cid].public_key:
             return Responses.DeclineReLogin(cid)
 
-        payload_size = Client_ID_Length + AES_Key_Length
+        user = self.users_map[cid]
+        rsa_encrypter = PKCS1_OAEP.new(RSA.importKey(user.public_key))
+        encrypted_aes_key: bytes = rsa_encrypter.encrypt(user.aes_key)
 
-        return Responses.AllowRelogin(payload_size, cid, self.users_map[cid].AES_key)
+        return Responses.AllowRelogin(cid, encrypted_aes_key)
 
     def handle_file_transfer_request(self, req:Requests.FileTransfer) -> Responses.Response:
         file =
