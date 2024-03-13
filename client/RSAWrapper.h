@@ -1,5 +1,6 @@
 #pragma once
-
+#ifndef _RSAWRAPPER_GUARD
+#define _RSAWRAPPER_GUARD
 #include <osrng.h>
 #include <rsa.h>
 #include <string>
@@ -57,3 +58,4 @@ public:
 	std::string decrypt(const std::string& cipher);
 	std::string decrypt(const char* cipher, unsigned int length);
 };
+#endif

@@ -17,7 +17,8 @@ class FieldsSizes:
     ORIGINAL_CONTENT_SIZE = 4
     PACKET_NUMBER = 2
     TOTAL_PACKETS = 2
-    CKSUM = 4
+    FILE_NAME = 255
+    CHECKSUM = 4
 
 class ResponseCodes:
     RegistrationSuccess = 1600

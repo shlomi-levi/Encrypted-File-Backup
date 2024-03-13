@@ -1,4 +1,6 @@
 #pragma once
+#ifndef _RESPONSES_GUARD
+#define _RESPONSES_GUARD
 #include <iostream>
 #include <cstdlib>
 #include <boost/asio.hpp>
@@ -71,3 +73,4 @@ public:
 class GeneralServerError: public Response {
 
 };
+#endif

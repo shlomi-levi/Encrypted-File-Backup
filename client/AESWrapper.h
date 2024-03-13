@@ -1,4 +1,6 @@
 #pragma once
+#ifndef _AESWRAPPER_GUARD
+#define _AESWRAPPER_GUARD
 
 #include <string>
 #include "Protocol.h"
@@ -24,3 +26,4 @@ public:
 	std::string encrypt(const char* plain, unsigned int length);
 	std::string decrypt(const char* cipher, unsigned int length);
 };
+#endif

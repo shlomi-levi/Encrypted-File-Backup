@@ -1,6 +1,6 @@
 #pragma once
-#ifndef UTILITIES
-#define UTILITIES
+#ifndef _UTILITIES_GUARD
+#define _UTILITIES_GUARD
 
 #include <vector>
 #include "Protocol.h"

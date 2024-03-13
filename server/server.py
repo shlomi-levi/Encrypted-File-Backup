@@ -4,10 +4,11 @@ import Requests
 import Responses
 import socket
 from constants import *
-
+from os.path import basename, getsize
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
+from checksum import get_checksum
 
 # TODO: GO OVER ALL HANDLERS AGAIN TO SEE I DIDNT MISS SOMETHING.
 
@@ -18,31 +19,36 @@ class Server:
         self.PORT = PORT
 
     def wait_for_requests(self):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.bind( ('localhost', self.PORT))
-            sock.listen()
-            # sock.setblocking()
-            conn, addr = sock.accept()
-            # TODO: add support to multiple clients
-            req:Requests.Request = Requests.parse_request(conn)
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.bind( ('localhost', self.PORT))
+                sock.listen()
+                # sock.setblocking()
+                conn, addr = sock.accept()
+                # TODO: add support to multiple clients
+                req:Requests.Request = Requests.parse_request(conn)
 
-            handler_dict = {
-                RequestCodes.REGISTRATION : self.handle_registration_request,
-                RequestCodes.PUBLIC_KEY_TRANSFER: self.handle_public_key_transfer_request,
-                RequestCodes.RELOGIN: self.handle_relogin_request,
-                RequestCodes.FILETRANSFER: self.handle_file_transfer_request,
-                RequestCodes.VALIDCRC: self.handle_valid_crc_reqeust,
-                RequestCodes.INVALIDCRC: self.handle_invalid_crc_request,
-                RequestCodes.INVALIDCRCFOURTHTIME: self.handle_invalid_crc_fourth_time_request
-            }
+                handler_dict = {
+                    RequestCodes.REGISTRATION : self.handle_registration_request,
+                    RequestCodes.PUBLIC_KEY_TRANSFER: self.handle_public_key_transfer_request,
+                    RequestCodes.RELOGIN: self.handle_relogin_request,
+                    RequestCodes.FILETRANSFER: self.handle_file_transfer_request,
+                    RequestCodes.VALIDCRC: self.handle_valid_crc_reqeust,
+                    RequestCodes.INVALIDCRC: self.handle_invalid_crc_request,
+                    RequestCodes.INVALIDCRCFOURTHTIME: self.handle_invalid_crc_fourth_time_request
+                }
 
-            response = handler_dict[req.header.code](req) # type:ignore
-            sock.sendall(response.pack())
+                response = handler_dict[req.header.code](req, conn) # type:ignore
+                sock.sendall(response.pack())
+
+        except:
+            if sock:
+                sock.close()
 
     def start(self):
         self.wait_for_requests()
 
-    def handle_registration_request(self, req:Requests.Registration) -> Responses.Response:
+    def handle_registration_request(self, req:Requests.Registration, conn) -> Responses.Response:
         user_uuid = uuid.uuid4().bytes.decode()
 
         while user_uuid in self.users_map:
@@ -54,7 +60,7 @@ class Server:
 
         return res
 
-    def handle_public_key_transfer_request(self, req:Requests.PublicKeyTransfer) -> Responses.Response:
+    def handle_public_key_transfer_request(self, req:Requests.PublicKeyTransfer, conn) -> Responses.Response:
         if req.header.client_id not in self.users_map:
             return Responses.GeneralServerError()
 
@@ -69,7 +75,7 @@ class Server:
 
         return Responses.PublicKeyRecieved(req.header.client_id, encrypted_aes_key)
 
-    def handle_relogin_request(self, req:Requests.Relogin) -> Responses.Response:
+    def handle_relogin_request(self, req:Requests.Relogin, conn) -> Responses.Response:
         cid = req.header.client_id
 
         if cid not in self.users_map or not self.users_map[cid].public_key:
@@ -81,16 +87,36 @@ class Server:
 
         return Responses.AllowRelogin(cid, encrypted_aes_key)
 
-    def handle_file_transfer_request(self, req:Requests.FileTransfer) -> Responses.Response:
-        file =
+    def handle_file_transfer_request(self, req:Requests.FileTransfer, conn) -> Responses.Response:
+        if req.header.client_id not in self.users_map:
+            return Responses.GeneralServerError()
+
+        file_path = f"{req.header.client_id}/{basename(req.file_name)}"
+
+        user = self.users_map[req.header.client_id]
+        cipher = AES.new(user.aes_key, AES.MODE_CBC, iv=b'\x00' * 16)
+
+        try:
+            with open(file_path, "wb") as f:
+                while True:
+                    decrypted_message:bytes = cipher.decrypt(req.message_content)
+                    f.write(decrypted_message)
+
+                    if req.packet_number >= req.total_packets:
+                        break
+
+                    req = Requests.parse_request(conn)
+
+        except:
+            return Responses.GeneralServerError()
+
+        return Responses.FileRecieved(req.header.client_id, getsize(file_path), basename(req.file_name), get_checksum(file_path))
+
+    def handle_valid_crc_reqeust(self, req:Requests.ValidCRC, conn) -> Responses.Response:
         pass
 
-    def handle_valid_crc_reqeust(self, req:Requests.ValidCRC) -> Responses.Response:
-
+    def handle_invalid_crc_request(self, req:Requests.InvalidCRC, conn) -> Responses.Response:
         pass
 
-    def handle_invalid_crc_request(self, req:Requests.InvalidCRC) -> Responses.Response:
-        pass
-
-    def handle_invalid_crc_fourth_time_request(self, req:Requests.InvalidCRCFourthTime) -> Responses.Response:
+    def handle_invalid_crc_fourth_time_request(self, req:Requests.InvalidCRCFourthTime, conn) -> Responses.Response:
         pass

@@ -1,4 +1,6 @@
 #pragma once
+#ifndef _USER_GUARD
+#define _USER_GUARD
 #include <iostream>
 #include <boost/asio.hpp>
 #include "AESWrapper.h"
@@ -35,3 +37,4 @@ public:
 	void start();
 };
 
+#endif

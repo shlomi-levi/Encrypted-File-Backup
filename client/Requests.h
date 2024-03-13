@@ -1,4 +1,6 @@
 #pragma once
+#ifndef _REQUESTS_GUARD
+#define _REQUESTS_GUARD
 #include <iostream>
 #include <cstdint>
 #include <vector>
@@ -76,4 +78,4 @@ public:
 	InvalidCRCFourthTime(const User& u);
 	char file_name[Constants::Sizes_In_Bytes::FILE_NAME];
 };
-		
+#endif		

@@ -98,7 +98,7 @@ std::unique_ptr<Response> Response::get_response(tcp::socket& s, User* u=nullptr
 	}
 
 	if(!Endian::is_little_endian()) {
-		if(header.code == Constants::Responses::codes::FileRecieved) { // the order is important because we flip header.code next. keep this if statement here.
+		if(header.code == Constants::Responses::codes::FileRecieved) { // The order is important because we flip header.code next. keep this if statement here.
 			FileRecieved* temp = static_cast<FileRecieved*>(res.get());
 			Endian::flip_endianness(temp->content_size);
 			Endian::flip_endianness(temp->checksum);

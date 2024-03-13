@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <fstream>
 #include <exception>
+
 #include "User.h"
 #include "Protocol.h"
 #include "Utilities.h"
@@ -9,8 +10,9 @@
 #include "Responses.h"
 #include "Base64Wrapper.h"
 #include "RSAWrapper.h"
+#include "checksum.h"
 
-// Todo: add header guards for all header files (lo kashur la kovez haze)
+// TODO: Add saving of user details in a file
 
 using std::cerr;
 using std::cout;
@@ -157,6 +159,15 @@ void User::handle_file_transfer(tcp::socket& s) {
 			boost::asio::write(s, boost::asio::buffer(&req, sizeof(FileTransfer)));
 			boost::asio::write(s, boost::asio::buffer(&encrypted_text, encrypted_text.size()));
 		}
+	}
+
+	catch(const std::exception& e) {
+		cerr << e.what() << endl;
+		if(s.is_open())
+			s.close();
+
+		exit(1);
+	}
 }
 
 void User::start() {
@@ -174,8 +185,41 @@ void User::start() {
 			handle_registration(s);
 
 		// Now the client is logged in and has a key.
-		handle_file_transfer(s);
-		// Todo: continue this.
+		unsigned long checksum_result = calculate_crc(file_name);
+
+		int failed_transfers_counter = 0;
+
+		while(failed_transfers_counter < 4) {
+			handle_file_transfer(s);
+			
+			std::unique_ptr<Response> res = Response::get_response(s);
+
+			if(res->header.code == Constants::Responses::codes::GeneralServerError) {
+				// Todo: decide how to handle this error.
+			}
+
+			if(res->header.code == Constants::Responses::codes::FileRecieved) {
+				FileRecieved* fr = static_cast<FileRecieved*>(res.get());
+				if(fr->checksum == checksum_result)
+					break;
+
+				failed_transfers_counter++;
+
+				InvalidCRC req {*this};
+				boost::asio::write(s, boost::asio::buffer(&req, sizeof(InvalidCRC)));
+			}
+		}
+
+		if(failed_transfers_counter == 4) {
+			InvalidCRCFourthTime req {*this};
+			boost::asio::write(s, boost::asio::buffer(&req, sizeof(InvalidCRCFourthTime)));
+		}
+
+		std::unique_ptr<Response> res = Response::get_response(s);
+
+		if(res->header.code != Constants::Responses::codes::MessageRecieved) {
+			// Todo: decide how to handle this error.
+		}
 	}
 
 	catch(const std::exception& e) {

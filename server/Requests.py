@@ -14,10 +14,10 @@ Header_Payload_Size = 4
 class RequestHeader:
     client_id: str
     version: int
-    code: Request_Codes
+    code: int
     payload_size: int
 
-    def __init__(self, clientid:str, version:int, code:Request_Codes, payloadsize:int):
+    def __init__(self, clientid:str, version:int, code:int, payloadsize:int):
         self.client_id = clientid
         self.version = version
         self.code = code
@@ -158,13 +158,13 @@ class InvalidCRCFourthTime(Request):
 
 def parse_request(conn) -> Request:
     Request_Codes_To_Handlers = {
-        Request_Codes.REGISTRATION: Registration.create_request_from_payload,
-        Request_Codes.PUBLIC_KEY_TRANSFER: PublicKeyTransfer.create_request_from_payload,
-        Request_Codes.RELOGIN: Relogin.create_request_from_payload,
-        Request_Codes.FILETRANSFER: FileTransfer.create_request_from_payload,
-        Request_Codes.VALIDCRC: ValidCRC.create_request_from_payload,
-        Request_Codes.INVALIDCRC: InvalidCRC.create_request_from_payload,
-        Request_Codes.INVALIDCRCFOURTHTIME: InvalidCRCFourthTime.create_request_from_payload
+        RequestCodes.REGISTRATION: Registration.create_request_from_payload,
+        RequestCodes.PUBLIC_KEY_TRANSFER: PublicKeyTransfer.create_request_from_payload,
+        RequestCodes.RELOGIN: Relogin.create_request_from_payload,
+        RequestCodes.FILETRANSFER: FileTransfer.create_request_from_payload,
+        RequestCodes.VALIDCRC: ValidCRC.create_request_from_payload,
+        RequestCodes.INVALIDCRC: InvalidCRC.create_request_from_payload,
+        RequestCodes.INVALIDCRCFOURTHTIME: InvalidCRCFourthTime.create_request_from_payload
     }
 
     try:

@@ -1,8 +1,8 @@
-from abc import ABC, abstractmethod
 
 import constants
-# import Requests
 import struct
+
+from abc import ABC, abstractmethod
 
 class ResponseHeader:
     code:int
@@ -36,13 +36,12 @@ class RegisterationSuccess(Response):
     def pack_payload(self) -> bytes:
         # Small endian of:
             # client id - 16 bytes
-        return struct.pack("<16s", self.client_id)
+        return struct.pack(f"<{constants.FieldsSizes.CLIENT_ID}s", self.client_id)
 
     def __init__(self, client_id:str):
-        PAYLOAD_SIZE = 16
+        PAYLOAD_SIZE = constants.FieldsSizes.CLIENT_ID
 
         self.header = ResponseHeader(constants.ResponseCodes.RegistrationSuccess, PAYLOAD_SIZE)
-
         self.client_id = client_id
 
 class RegistrationFailure(Response):
@@ -50,9 +49,7 @@ class RegistrationFailure(Response):
         return bytes()
 
     def __init__(self):
-        PAYLOAD_SIZE = 0
-
-        self.header = ResponseHeader(constants.ResponseCodes.RegistrationFailure, PAYLOAD_SIZE)
+        self.header = ResponseHeader(constants.ResponseCodes.RegistrationFailure, 0)
 
 class PublicKeyRecieved(Response):
     client_id:str
@@ -86,10 +83,9 @@ class FileRecieved(Response):
         return struct.pack("<16sI255s4s", self.client_id, self.content_size, self.file_name, self.checksum)
 
     def __init__(self, client_id:str, content_size:int, file_name:str, cksum:int):
-        PAYLOAD_SIZE = 16 + 4 + 255 + 4
+        PAYLOAD_SIZE:int = constants.FieldsSizes.CLIENT_ID + constants.FieldsSizes.CONTENT_SIZE + constants.FieldsSizes.FILE_NAME + constants.FieldsSizes.CHECKSUM
 
         self.header = ResponseHeader(constants.ResponseCodes.FileRecieved, PAYLOAD_SIZE)
-
         self.client_id = client_id
         self.content_size = content_size
         self.file_name = file_name
@@ -104,7 +100,7 @@ class MessageRecieved(Response):
         return struct.pack(f"<{constants.FieldsSizes.CLIENT_ID}s", self.client_id)
 
     def __init__(self, client_id:str):
-        PAYLOAD_SIZE = 16
+        PAYLOAD_SIZE = constants.FieldsSizes.CLIENT_ID
 
         self.header = ResponseHeader(constants.ResponseCodes.MessageRecieved, PAYLOAD_SIZE)
         self.client_id = client_id

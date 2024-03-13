@@ -1,6 +1,6 @@
 #pragma once
-#ifndef PROTOCOL
-#define PROTOCOL
+#ifndef _PROTOCOL_GUARD
+#define _PROTOCOL_GUARD
 #include <iostream>
 #include <string>
 #include <cstdint>
