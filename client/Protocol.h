@@ -48,29 +48,29 @@ namespace Constants {
 		constexpr int HEADER_SIZE = Sizes_In_Bytes::CLIENT_ID + Sizes_In_Bytes::CLIENT_VERSION +
 			REQUEST_CODE_SIZE + REQUEST_PAYLOAD_SIZE;
 
-		enum codes {
-			Registration = 1025,
-			PublicKeyTransfer = 1026,
-			Relogin = 1027,
-			FileTransfer = 1028,
-			ValidCRC = 1029,
-			InvalidCRC = 1030,
-			InvalidCRCFourthTime = 1031
+		namespace codes {
+			constexpr int Registration = 1025;
+			constexpr int PublicKeyTransfer = 1026;
+			constexpr int Relogin = 1027;
+			constexpr int FileTransfer = 1028;
+			constexpr int ValidCRC = 1029;
+			constexpr int InvalidCRC = 1030;
+			constexpr int InvalidCRCFourthTime = 1031;
 		};
 
 		// TODO: CHECK IF I EVEN NEED THIS (I CAN MAYBE USE IT TO VERIFY RESPONSE PAYLOAD SIZES)
-		enum payload_sizes {
-			Registration = Sizes_In_Bytes::CLIENT_NAME,
-			PublicKeyTransfer = Sizes_In_Bytes::CLIENT_NAME + Sizes_In_Bytes::PUBLIC_KEY,
-			Relogin = Sizes_In_Bytes::CLIENT_NAME,
+		namespace payload_sizes {
+			constexpr int Registration = Sizes_In_Bytes::CLIENT_NAME;
+			constexpr int PublicKeyTransfer = Sizes_In_Bytes::CLIENT_NAME + Sizes_In_Bytes::PUBLIC_KEY;
+			constexpr int Relogin = Sizes_In_Bytes::CLIENT_NAME;
 
-			FileTransfer = Sizes_In_Bytes::FILE_CONTENT_SIZE + Sizes_In_Bytes::FILE_CONTENT_ORIGINAL_SIZE +
+			constexpr int FileTransfer = Sizes_In_Bytes::FILE_CONTENT_SIZE + Sizes_In_Bytes::FILE_CONTENT_ORIGINAL_SIZE +
 			Sizes_In_Bytes::PACKET_NUMBER + Sizes_In_Bytes::TOTAL_PACKETS + Sizes_In_Bytes::FILE_NAME +
-			Sizes_In_Bytes::FILE_TRANSFER_BUFFER,
+			Sizes_In_Bytes::FILE_TRANSFER_BUFFER;
 
-			ValidCRC = Sizes_In_Bytes::CLIENT_NAME,
-			InvalidCRC = Sizes_In_Bytes::CLIENT_NAME,
-			InvalidCRCFourthTime = Sizes_In_Bytes::CLIENT_NAME
+			constexpr int ValidCRC = Sizes_In_Bytes::CLIENT_NAME;
+			constexpr int InvalidCRC = Sizes_In_Bytes::CLIENT_NAME;
+			constexpr int InvalidCRCFourthTime = Sizes_In_Bytes::CLIENT_NAME;
 		};
 	};
 
@@ -81,30 +81,30 @@ namespace Constants {
 		
 		constexpr int HEADER_SIZE = RESPONSE_VERSION_SIZE + RESPONSE_CODE_SIZE + RESPONSE_PAYLOAD_SIZE;
 
-		enum codes {
-			RegistrationSuccess = 1600,
-			RegistrationFailure = 1601,
-			PublicKeyRecieved = 1602,
-			FileRecieved = 1603,
-			MessageRecieved = 1604,
-			AllowRelogin = 1605,
-			DeclineRelogin = 1606,
-			GeneralServerError = 1607
+		namespace codes {
+			constexpr int RegistrationSuccess = 1600;
+			constexpr int RegistrationFailure = 1601;
+			constexpr int PublicKeyRecieved = 1602;
+			constexpr int FileRecieved = 1603;
+			constexpr int MessageRecieved = 1604;
+			constexpr int AllowRelogin = 1605;
+			constexpr int DeclineRelogin = 1606;
+			constexpr int GeneralServerError = 1607;
 		};
 		
 		// TODO: CHECK IF I EVEN NEED THIS (I CAN MAYBE USE IT TO VERIFY RESPONSE PAYLOAD SIZES)
-		enum payload_sizes {
-			RegistrationSuccedded = Sizes_In_Bytes::CLIENT_ID,
-			RegistrationFailure = 0,
-			PublicKeyRecieved = Sizes_In_Bytes::CLIENT_ID + Sizes_In_Bytes::AES_KEY,
+		namespace payload_sizes {
+			constexpr int RegistrationSuccedded = Sizes_In_Bytes::CLIENT_ID;
+			constexpr int RegistrationFailure = 0;
+			constexpr int PublicKeyRecieved = Sizes_In_Bytes::CLIENT_ID + Sizes_In_Bytes::AES_KEY;
 			
-			FileRecieved = Sizes_In_Bytes::CLIENT_ID + Sizes_In_Bytes::FILE_CONTENT_SIZE
-			+ Sizes_In_Bytes::FILE_NAME + Sizes_In_Bytes::CHECKSUM,
+			constexpr int FileRecieved = Sizes_In_Bytes::CLIENT_ID + Sizes_In_Bytes::FILE_CONTENT_SIZE
+			+ Sizes_In_Bytes::FILE_NAME + Sizes_In_Bytes::CHECKSUM;
 
-			MessageRecieved = Sizes_In_Bytes::CLIENT_ID,
-			AllowRelogin = Sizes_In_Bytes::CLIENT_ID + Sizes_In_Bytes::AES_KEY,
-			DeclineRelogin = Sizes_In_Bytes::CLIENT_ID,
-			GeneralServerError = 0
+			constexpr int MessageRecieved = Sizes_In_Bytes::CLIENT_ID;
+			constexpr int AllowRelogin = Sizes_In_Bytes::CLIENT_ID + Sizes_In_Bytes::AES_KEY;
+			constexpr int DeclineRelogin = Sizes_In_Bytes::CLIENT_ID;
+			constexpr int GeneralServerError = 0;
 		};
 	}
 }

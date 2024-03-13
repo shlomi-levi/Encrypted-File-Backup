@@ -5,12 +5,6 @@ from abc import ABC, abstractmethod
 import struct
 from constants import *
 
-Header_Size = 23
-Header_Client_Id_Size = 16
-Header_Version_Size = 1
-Header_Code_Size = 2
-Header_Payload_Size = 4
-
 class RequestHeader:
     client_id: str
     version: int
@@ -88,19 +82,15 @@ class FileTransfer(Request):
 
     @staticmethod
     def create_request_from_payload(header:RequestHeader, payload:bytes) -> Request:
-        content_size_field_length = 4
-        original_size_field_length = 4
-        packet_number_field_length = 2
-        total_packets_field_length = 2
-        file_name_field_length = 255
-
         content_size, original_size, packet_number, total_packets = struct.unpack("<IIHH", payload)
 
-        payload = payload[content_size_field_length + original_size_field_length + packet_number_field_length + total_packets_field_length:]
+        offset = FieldsSizes.CONTENT_SIZE + FieldsSizes.ORIGINAL_CONTENT_SIZE + FieldsSizes.PACKET_NUMBER + FieldsSizes.TOTAL_PACKETS
 
-        file_name = struct.unpack(f"<{file_name_field_length}s", payload)[0]
+        payload = payload[offset:]
 
-        payload = payload[file_name_field_length:]
+        file_name = struct.unpack(f"<{FieldsSizes.FILE_NAME}s", payload)[0]
+
+        payload = payload[FieldsSizes.FILE_NAME:]
 
         message_content = struct.unpack("<", payload)[0]
 
@@ -120,8 +110,7 @@ class ValidCRC(Request):
 
     @staticmethod
     def create_request_from_payload(header:RequestHeader, payload:bytes) -> Request:
-        file_name_field_length = 255
-        file_name = struct.unpack(f"<{file_name_field_length}s", payload)[0]
+        file_name = struct.unpack(f"<{FieldsSizes.FILE_NAME}s", payload)[0]
 
         return ValidCRC(header, file_name)
     def __init__(self, header:RequestHeader, file_name):
@@ -133,8 +122,7 @@ class InvalidCRC(Request):
 
     @staticmethod
     def create_request_from_payload(header:RequestHeader, payload:bytes) -> Request:
-        file_name_field_length = 255
-        file_name = struct.unpack(f"<{file_name_field_length}s", payload)[0]
+        file_name = struct.unpack(f"<{FieldsSizes.FILE_NAME}s", payload)[0]
 
         return ValidCRC(header, file_name)
 
@@ -147,8 +135,7 @@ class InvalidCRCFourthTime(Request):
 
     @staticmethod
     def create_request_from_payload(header:RequestHeader, payload:bytes) -> Request:
-        file_name_field_length = 255
-        file_name = struct.unpack(f"<{file_name_field_length}s", payload)[0]
+        file_name = struct.unpack(f"<{FieldsSizes.FILE_NAME}s", payload)[0]
 
         return ValidCRC(header, file_name)
 
@@ -168,16 +155,16 @@ def parse_request(conn) -> Request:
     }
 
     try:
-        request_bytes = conn.recv(Header_Size)  # Get the header
+        request_bytes = conn.recv(FieldsSizes.HEADER)  # Get the header
 
-        client_id = struct.unpack(f"<{Header_Client_Id_Size}s", request_bytes[:Header_Client_Id_Size])[0]
+        client_id = struct.unpack(f"<{FieldsSizes.CLIENT_ID}s", request_bytes[:FieldsSizes.CLIENT_ID])[0]
 
-        version, code, payload_size = struct.unpack("<BHL", request_bytes[Header_Client_Id_Size:])
+        version, code, payload_size = struct.unpack("<BHL", request_bytes[FieldsSizes.CLIENT_ID:])
 
-        if code not in Request_Codes_To_Handlers:
+        # if code not in Request_Codes_To_Handlers:
         # TODO: output error, invalid code
 
-        if payload_size != desired_payload_size:
+        # if payload_size != desired_payload_size:
         # TODO: output error, invalid payload size
 
         header = RequestHeader(client_id, version, code, payload_size)
@@ -187,9 +174,8 @@ def parse_request(conn) -> Request:
         return Request_Codes_To_Handlers[code](header, payload_bytes)
 
     except:
-        return None
+        return None # type: ignore
 
-    return True
 
 
 

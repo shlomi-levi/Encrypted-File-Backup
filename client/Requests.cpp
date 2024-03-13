@@ -1,3 +1,4 @@
+#include <iostream>
 #include <algorithm>
 #include <string.h>
 #include "Requests.h"
@@ -12,6 +13,8 @@ RequestHeader& RequestHeader::operator=(const RequestHeader& other) {
 	version = other.version;
 	code = other.code;
 	payload_size = other.payload_size;
+
+	return *this;
 }
 
 void RequestHeader::init(const char client_id[], uint16_t code, uint32_t payload_size) {
@@ -55,7 +58,7 @@ FileTransfer::FileTransfer(const User& u, uint32_t content_size, uint32_t origin
 	this->packet_number = packet_number;
 	this->total_packets = total_packets;
 
-	std::copy(this->file_name, this->file_name + Constants::Sizes_In_Bytes::FILE_NAME, u.file_name);
+	std::copy(u.file_name, u.file_name + Constants::Sizes_In_Bytes::FILE_NAME, this->file_name);
 
 	if(!Endian::is_little_endian()) {
 		Endian::flip_endianness(this->content_size);
@@ -67,15 +70,15 @@ FileTransfer::FileTransfer(const User& u, uint32_t content_size, uint32_t origin
 
 ValidCRC::ValidCRC(const User& u) {
 	this->header.init(u.uuid, Constants::Requests::codes::ValidCRC, Constants::Requests::payload_sizes::ValidCRC);
-	std::copy(this->file_name, this->file_name + Constants::Sizes_In_Bytes::FILE_NAME, u.file_name);
+	std::copy(u.file_name, u.file_name + Constants::Sizes_In_Bytes::FILE_NAME, this->file_name);
 }
 
 InvalidCRC::InvalidCRC(const User& u) {
 	this->header.init(u.uuid, Constants::Requests::codes::InvalidCRC, Constants::Requests::payload_sizes::InvalidCRC);
-	std::copy(this->file_name, this->file_name + Constants::Sizes_In_Bytes::FILE_NAME, u.file_name);
+	std::copy(u.file_name, u.file_name + Constants::Sizes_In_Bytes::FILE_NAME, this->file_name);
 }
 
 InvalidCRCFourthTime::InvalidCRCFourthTime(const User& u) {
 	this->header.init(u.uuid, Constants::Requests::codes::InvalidCRCFourthTime, Constants::Requests::payload_sizes::InvalidCRCFourthTime);
-	std::copy(this->file_name, this->file_name + Constants::Sizes_In_Bytes::FILE_NAME, u.file_name);
+	std::copy(u.file_name, u.file_name + Constants::Sizes_In_Bytes::FILE_NAME, this->file_name);
 }

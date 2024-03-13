@@ -1,15 +1,14 @@
 #include <iostream>
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <exception>
 
 #include "User.h"
-#include "Protocol.h"
 #include "Utilities.h"
 #include "Requests.h"
 #include "Responses.h"
 #include "Base64Wrapper.h"
-#include "RSAWrapper.h"
 #include "checksum.h"
 
 // TODO: Add saving of user details in a file
@@ -18,7 +17,7 @@ using std::cerr;
 using std::cout;
 using std::endl;
 
-User::User(string server_address, string server_port, string user_name, string file_path, string user_uuid="", string private_key="") {
+User::User(string server_address, string server_port, string user_name, string file_path, string user_uuid, string private_key) : aes_object(nullptr) {
 	has_uuid = false;
 
 	if(user_name.length() > (Constants::Sizes_In_Bytes::CLIENT_NAME - 1)) // -1 for \0 character
@@ -53,9 +52,9 @@ User::User(string server_address, string server_port, string user_name, string f
 
 }
 
-string User::get_file_name() {
-	int offset = 0;
-	int temp = this->file_path.find("\\", offset);
+void User::get_file_name() {
+	size_t offset = 0;
+	size_t temp = this->file_path.find("\\", offset);
 
 	while(temp != std::string::npos) {
 		offset = temp;
@@ -65,6 +64,22 @@ string User::get_file_name() {
 	string fname = this->file_path.substr(offset + 1);
 
 	copy_from_string_to_array(this->file_name, Constants::Sizes_In_Bytes::FILE_NAME, fname, true);
+}
+
+void User::decrypt_key(unsigned char* dest, size_t dest_length, std::vector<char>encrypted_aes_key_vector) {
+	string encrypted_aes_key_string = "";
+
+	for(int i = 0; i < encrypted_aes_key_vector.size(); i++)
+		encrypted_aes_key_string += encrypted_aes_key_vector[i];
+
+	string decrypted_aes_key = rsa_object->decrypt(encrypted_aes_key_string);
+
+	if(decrypted_aes_key.size() != dest_length) {
+		// Todo: Throw error that the encrypted size doesn't match the aes_key size.
+	}
+
+	for(int i = 0 ; i < dest_length ; i++)
+		dest[i] = decrypted_aes_key[i];
 }
 
 void User::handle_relogin(tcp::socket& s) {
@@ -82,7 +97,16 @@ void User::handle_relogin(tcp::socket& s) {
 
 	if(res->header.code == Constants::Responses::codes::AllowRelogin) {
 		AllowRelogin* relogin_response = static_cast<AllowRelogin*>(res.get());
-		aes_object = std::make_unique<AESWrapper>(relogin_response->EncryptedAESKey, Constants::Sizes_In_Bytes::AES_KEY);
+
+		int encrypted_aes_key_length = res->header.payload_size - Constants::Sizes_In_Bytes::CLIENT_ID;
+		std::vector<char> encrypted_aes_key_vector(encrypted_aes_key_length);
+
+		boost::asio::read(s, boost::asio::buffer(&encrypted_aes_key_vector, encrypted_aes_key_length));
+
+		unsigned char decrypted_key[Constants::Sizes_In_Bytes::AES_KEY];
+		decrypt_key(decrypted_key, Constants::Sizes_In_Bytes::AES_KEY, encrypted_aes_key_vector);
+
+		aes_object = std::make_unique<AESWrapper>(decrypted_key, Constants::Sizes_In_Bytes::AES_KEY);
 
 		std::copy(relogin_response->client_id, relogin_response->client_id + Constants::Sizes_In_Bytes::CLIENT_ID, uuid);
 
@@ -145,16 +169,16 @@ void User::handle_file_transfer(tcp::socket& s) {
 			exit(1);
 		}
 
-		int packet_count = 0;
-		int total_packets = ceil(std::filesystem::file_size(file_name) / Constants::Sizes_In_Bytes::FILE_TRANSFER_BUFFER);
+		uint16_t packet_count = 0;
+		uint16_t total_packets = static_cast<uint16_t>(ceil(std::filesystem::file_size(file_name) / Constants::Sizes_In_Bytes::FILE_TRANSFER_BUFFER));
 
 		while(!f.eof()) {
 			packet_count += 1;
 
 			f.read(buffer, Constants::Sizes_In_Bytes::FILE_TRANSFER_BUFFER);
-			string encrypted_text = aes_object->encrypt(buffer, f.gcount());
+			string encrypted_text = aes_object->encrypt(buffer, static_cast<unsigned int>(f.gcount()));
 
-			FileTransfer req {*this, encrypted_text.size(), f.gcount(), packet_count, total_packets};
+			FileTransfer req {*this, static_cast<uint32_t>(encrypted_text.size()), static_cast<uint32_t>(f.gcount()), packet_count, total_packets};
 
 			boost::asio::write(s, boost::asio::buffer(&req, sizeof(FileTransfer)));
 			boost::asio::write(s, boost::asio::buffer(&encrypted_text, encrypted_text.size()));

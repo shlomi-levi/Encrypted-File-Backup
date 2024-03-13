@@ -1,12 +1,10 @@
 #pragma once
 #ifndef _RESPONSES_GUARD
 #define _RESPONSES_GUARD
-#include <iostream>
-#include <cstdlib>
 #include <boost/asio.hpp>
 #include "Protocol.h"
-#include "User.h"
 
+class User;
 using boost::asio::ip::tcp;
 
 class ResponseHeader {
@@ -43,7 +41,7 @@ class RegistrationFailure: public Response {
 class PublicKeyRecieved: public Response {
 public:
 	char client_id[Constants::Sizes_In_Bytes::CLIENT_ID];
-	char decrypted_aes_key[Constants::Sizes_In_Bytes::AES_KEY];
+	unsigned char decrypted_aes_key[Constants::Sizes_In_Bytes::AES_KEY];
 };
 
 class FileRecieved: public Response {
@@ -62,7 +60,6 @@ public:
 class AllowRelogin: public Response {
 public:
 	char client_id[Constants::Sizes_In_Bytes::CLIENT_ID];
-	char EncryptedAESKey[Constants::Sizes_In_Bytes::AES_KEY];
 };
 
 class DeclineRelogin: public Response {

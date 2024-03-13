@@ -17,7 +17,12 @@ namespace Endian {
 	bool is_little_endian();
 
 	template <typename intType>
-	void flip_endianness(intType& src);
+	static void flip_endianness(intType& src) {
+		uint8_t buffer[sizeof(intType)] = {0};
+		memcpy(buffer, &src, sizeof(intType));
+		std::reverse(buffer, buffer + sizeof(intType));
+		memcpy(&src, buffer, sizeof(intType));
+	}
 }
 
 void copy_from_string_to_array(char array[], int len, const std::string& src, bool add_terminating_zero = false);

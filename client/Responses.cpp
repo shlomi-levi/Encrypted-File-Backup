@@ -1,5 +1,6 @@
 #include "Responses.h"
 #include "Utilities.h"
+#include "User.h"
 
 ResponseHeader& ResponseHeader::operator=(const ResponseHeader& other) {
 	if(this == &other)
@@ -12,7 +13,7 @@ ResponseHeader& ResponseHeader::operator=(const ResponseHeader& other) {
 	return *this;
 }
 
-std::unique_ptr<Response> Response::get_response(tcp::socket& s, User* u=nullptr) {
+std::unique_ptr<Response> Response::get_response(tcp::socket& s, User* u) {
 	ResponseHeader header;
 	boost::asio::read(s, boost::asio::buffer(&header, sizeof(header)));
 	
@@ -62,7 +63,8 @@ std::unique_ptr<Response> Response::get_response(tcp::socket& s, User* u=nullptr
 			res = std::make_unique<GeneralServerError>();
 			break;
 
-		case default:
+		default:
+			std::cout << "ERROR";
 			// Todo: throw error.
 	}
 
@@ -79,18 +81,7 @@ std::unique_ptr<Response> Response::get_response(tcp::socket& s, User* u=nullptr
 
 		boost::asio::read(s, boost::asio::buffer(&encrypted_aes_key_vector, encrypted_aes_key_length));
 
-		// Copy from the vector to a string
-		string encrypted_aes_key_string = "";
-		for(int i = 0 ; i < encrypted_aes_key_vector.size() ; i++)
-			encrypted_aes_key_string += encrypted_aes_key_vector[i];
-
-		string decrypted_aes_key = u->rsa_object->decrypt(encrypted_aes_key_string);
-		
-		if(decrypted_aes_key.size() != Constants::Sizes_In_Bytes::AES_KEY) {
-			// Todo: Throw error that the encrypted size doesn't match the aes_key size.
-		}
-
-		copy_from_string_to_array(pkr->decrypted_aes_key, Constants::Sizes_In_Bytes::AES_KEY, decrypted_aes_key);
+		u->decrypt_key(pkr->decrypted_aes_key, Constants::Sizes_In_Bytes::AES_KEY, encrypted_aes_key_vector);
 	}
 	
 	else {

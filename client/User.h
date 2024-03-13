@@ -1,7 +1,6 @@
 #pragma once
 #ifndef _USER_GUARD
 #define _USER_GUARD
-#include <iostream>
 #include <boost/asio.hpp>
 #include "AESWrapper.h"
 #include "RSAWrapper.h"
@@ -11,8 +10,9 @@ using std::unique_ptr;
 using boost::asio::ip::tcp;
 
 class User {
+
 private:
-	string get_file_name();
+	void get_file_name();
 	void handle_relogin(tcp::socket& s);
 	void handle_registration(tcp::socket& s);
 	void handle_public_key_transfer(tcp::socket& s);
@@ -35,6 +35,6 @@ public:
 	User(string server_address, string server_port, string user_name, string file_path, string UUID="", string private_key="");
 
 	void start();
+	void decrypt_key(unsigned char* dest, size_t dest_length, std::vector<char>encrypted_aes_key_vector);
 };
-
 #endif

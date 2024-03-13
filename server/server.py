@@ -67,7 +67,7 @@ class Server:
         u:User = self.users_map[req.header.client_id]
         u.public_key = req.public_key
 
-        aes_key = get_random_bytes(SYMMETRIC_AES_KEY_LENGTH)
+        aes_key = get_random_bytes(FieldsSizes.AES_KEY)
         u.aes_key = aes_key
 
         rsa_encrypter = PKCS1_OAEP.new(RSA.importKey(req.public_key))
@@ -113,10 +113,10 @@ class Server:
         return Responses.FileRecieved(req.header.client_id, getsize(file_path), basename(req.file_name), get_checksum(file_path))
 
     def handle_valid_crc_reqeust(self, req:Requests.ValidCRC, conn) -> Responses.Response:
-        pass
+        return Responses.MessageRecieved(req.header.client_id)
 
     def handle_invalid_crc_request(self, req:Requests.InvalidCRC, conn) -> Responses.Response:
-        pass
+        pass # we don't need to do anything actually in this case
 
     def handle_invalid_crc_fourth_time_request(self, req:Requests.InvalidCRCFourthTime, conn) -> Responses.Response:
-        pass
+        return Responses.MessageRecieved(req.header.client_id)

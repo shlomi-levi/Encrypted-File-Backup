@@ -1,12 +1,11 @@
-# from enum import Enum
 
 SERVER_VERSION = 3
-SYMMETRIC_AES_KEY_LENGTH = 32
-Client_ID_Length = 16
 PORT_INFO_FILE = 'port.info'
 DEFAULT_PORT = 1256
 
 class FieldsSizes:
+    AES_KEY = 32
+    HEADER = 23
     CLIENT_ID = 16
     CLIENT_NAME = 255
     SERVER_VERSION = 1

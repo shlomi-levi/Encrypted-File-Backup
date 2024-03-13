@@ -13,8 +13,15 @@ using std::cout;
 using std::endl;
 using boost::algorithm::hex;
 
+namespace Endian {
+	bool is_little_endian() {
+		static int num = 1;
+		return (*(char*) &num == 1) ? true : false;
+	}
+};
+
 namespace Hex {
-	string bytes_to_hex_string(const char* bytes, size_t length = Constants::Sizes_In_Bytes::CLIENT_ID) {
+	string bytes_to_hex_string(const char* bytes, size_t length) {
 		std::string str;
 		hex(bytes, bytes + length, std::back_inserter(str));
 		return str;
@@ -31,22 +38,7 @@ namespace Hex {
 	}
 }
 
-namespace Endian {
-	bool is_little_endian() {
-		static int num = 1;
-		return (*(char*) &num == 1) ? true : false;
-	}
-
-	template <typename intType>
-	void flip_endianness(intType& src) {
-		uint8_t buffer[sizeof(intType)] = {0};
-		memcpy(buffer, &src, sizeof(intType));
-		std::reverse(buffer, buffer + sizeof(intType));
-		memcpy(&src, buffer, sizeof(intType));
-	}
-}
-
-void copy_from_string_to_array(char array[], int len, const std::string& src, bool add_terminating_zero=false) {
+void copy_from_string_to_array(char array[], int len, const std::string& src, bool add_terminating_zero) {
 	static int src_string_len;
 	static int i;
 
@@ -163,7 +155,7 @@ void read_priv_key_file(client_info& result) {
 		f.open(Constants::PRIV_KEY_PATH, std::ios::in);
 
 		if(!f.is_open()) {
-			throw std::logic_error("The file " << Constants::PRIV_KEY_PATH << " exists, but the system could not open it.");
+			throw std::logic_error("The file " + Constants::PRIV_KEY_PATH + " exists, but the system could not open it.");
 			exit(1);
 		}
 
