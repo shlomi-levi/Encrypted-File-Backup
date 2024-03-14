@@ -30,7 +30,7 @@ class Registration(Request):
 
     @staticmethod
     def create_request_from_payload(header:RequestHeader, payload:bytes) -> Request:
-        client_name = struct.unpack("<s", payload)[0]
+        client_name = struct.unpack("16s", payload)[0]
 
         return Registration(header, client_name)
 
@@ -159,7 +159,9 @@ def parse_request(conn) -> Request:
 
         client_id = struct.unpack(f"<{FieldsSizes.CLIENT_ID}s", request_bytes[:FieldsSizes.CLIENT_ID])[0]
 
-        version, code, payload_size = struct.unpack("<BHL", request_bytes[FieldsSizes.CLIENT_ID:])
+        request_bytes = request_bytes[FieldsSizes.CLIENT_ID:]
+
+        version, code, payload_size = struct.unpack("<BHL", request_bytes)
 
         # if code not in Request_Codes_To_Handlers:
         # TODO: output error, invalid code
@@ -173,7 +175,8 @@ def parse_request(conn) -> Request:
 
         return Request_Codes_To_Handlers[code](header, payload_bytes)
 
-    except:
+    except Exception as e:
+        print(e)
         return None # type: ignore
 
 

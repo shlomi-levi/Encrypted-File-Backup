@@ -41,7 +41,8 @@ class Server:
                 response = handler_dict[req.header.code](req, conn) # type:ignore
                 sock.sendall(response.pack())
 
-        except:
+        except Exception as e:
+            print(e)
             if sock:
                 sock.close()
 

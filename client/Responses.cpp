@@ -65,7 +65,7 @@ std::unique_ptr<Response> Response::get_response(tcp::socket& s, User* u) {
 
 		default:
 			std::cout << "ERROR";
-			// Todo: throw error.
+			// Todo: throw error, and remove previous line.
 	}
 
 	res->header = header;

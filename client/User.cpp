@@ -84,7 +84,7 @@ void User::decrypt_key(unsigned char* dest, size_t dest_length, std::vector<char
 
 void User::handle_relogin(tcp::socket& s) {
 	Relogin relogin_req {*this};
-	boost::asio::write(s, boost::asio::buffer(&relogin_req, sizeof(relogin_req)));
+	boost::asio::write(s, boost::asio::buffer(relogin_req.pack()));
 
 	std::unique_ptr<Response> res = Response::get_response(s);
 
@@ -116,7 +116,7 @@ void User::handle_relogin(tcp::socket& s) {
 
 void User::handle_public_key_transfer(tcp::socket& s) {
 	PublicKeyTransfer public_key_transfer_req {*this};
-	boost::asio::write(s, boost::asio::buffer(&public_key_transfer_req, sizeof(public_key_transfer_req)));
+	boost::asio::write(s, boost::asio::buffer(public_key_transfer_req.pack()));
 
 	unique_ptr<Response> res = Response::get_response(s);
 
@@ -134,7 +134,10 @@ void User::handle_public_key_transfer(tcp::socket& s) {
 
 void User::handle_registration(tcp::socket& s) {
 	Registration registration_req {*this};
-	boost::asio::write(s, boost::asio::buffer(&registration_req, sizeof(registration_req)));
+
+	std::vector<uint8_t> packed = registration_req.pack();
+
+	boost::asio::write(s, boost::asio::buffer(packed));
 
 	unique_ptr<Response> res = Response::get_response(s);
 
@@ -180,7 +183,7 @@ void User::handle_file_transfer(tcp::socket& s) {
 
 			FileTransfer req {*this, static_cast<uint32_t>(encrypted_text.size()), static_cast<uint32_t>(f.gcount()), packet_count, total_packets};
 
-			boost::asio::write(s, boost::asio::buffer(&req, sizeof(FileTransfer)));
+			boost::asio::write(s, boost::asio::buffer(req.pack()));
 			boost::asio::write(s, boost::asio::buffer(&encrypted_text, encrypted_text.size()));
 		}
 	}
@@ -230,13 +233,13 @@ void User::start() {
 				failed_transfers_counter++;
 
 				InvalidCRC req {*this};
-				boost::asio::write(s, boost::asio::buffer(&req, sizeof(InvalidCRC)));
+				boost::asio::write(s, boost::asio::buffer(req.pack()));
 			}
 		}
 
 		if(failed_transfers_counter == 4) {
 			InvalidCRCFourthTime req {*this};
-			boost::asio::write(s, boost::asio::buffer(&req, sizeof(InvalidCRCFourthTime)));
+			boost::asio::write(s, boost::asio::buffer(req.pack()));
 		}
 
 		std::unique_ptr<Response> res = Response::get_response(s);

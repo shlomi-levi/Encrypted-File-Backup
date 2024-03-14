@@ -15,7 +15,7 @@ using boost::algorithm::hex;
 
 namespace Endian {
 	bool is_little_endian() {
-		static int num = 1;
+		int num = 1;
 		return (*(char*) &num == 1) ? true : false;
 	}
 };

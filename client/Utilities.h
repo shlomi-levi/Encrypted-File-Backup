@@ -11,13 +11,23 @@ namespace Hex {
 	string bytes_to_hex_string(const char* bytes, size_t length = Constants::Sizes_In_Bytes::CLIENT_ID);
 	
 	std::vector<char> hex_string_to_bytes(const std::string& hex); 
+
+	template <typename intType>
+	uint8_t get_byte(const intType& src, int byte_number) {
+		if(byte_number > sizeof(src))
+			throw std::logic_error("src variable doesn't contain that many bytes.");
+
+		uint8_t mask = 0xFF;
+
+		return (uint8_t) (src >> ((sizeof(src) - byte_number) * 8)) & mask;
+	}
 }
 
 namespace Endian {
 	bool is_little_endian();
 
 	template <typename intType>
-	static void flip_endianness(intType& src) {
+	void flip_endianness(intType& src) {
 		uint8_t buffer[sizeof(intType)] = {0};
 		memcpy(buffer, &src, sizeof(intType));
 		std::reverse(buffer, buffer + sizeof(intType));

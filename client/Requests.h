@@ -24,11 +24,14 @@ public:
 
 	void init(const char client_id[], uint16_t code, uint32_t payload_size);
 
+	std::vector<uint8_t> pack();
+
 	RequestHeader& operator=(const RequestHeader& other);
 };
 
 class Request {
 public:
+	virtual std::vector<uint8_t> pack() = 0;
 	RequestHeader header;
 	Request() {}
 };
@@ -37,6 +40,7 @@ class Registration: public Request {
 public:
 	Registration(const User& u);
 	char client_name[Constants::Sizes_In_Bytes::CLIENT_NAME];
+	std::vector<uint8_t> pack();
 
 };
 
@@ -45,12 +49,14 @@ public:
 	PublicKeyTransfer(const User& u);
 	char client_name[Constants::Sizes_In_Bytes::CLIENT_NAME];
 	char public_key[Constants::Sizes_In_Bytes::PUBLIC_KEY];
+	std::vector<uint8_t> pack();
 };
 
 class Relogin: public Request {
 public:
 	Relogin(const User& u);
 	char client_name[Constants::Sizes_In_Bytes::CLIENT_NAME];
+	std::vector<uint8_t> pack();
 };
 
 class FileTransfer: public Request {
@@ -62,23 +68,27 @@ public:
 	uint16_t packet_number;
 	uint16_t total_packets;
 	char file_name[Constants::Sizes_In_Bytes::FILE_NAME];
+	std::vector<uint8_t> pack();
 };
 
 class ValidCRC: public Request {
 public:
 	ValidCRC(const User& u);
 	char file_name[Constants::Sizes_In_Bytes::FILE_NAME];
+	std::vector<uint8_t> pack();
 };
 
 class InvalidCRC: public Request {
 public:
 	InvalidCRC(const User& u);
 	char file_name[Constants::Sizes_In_Bytes::FILE_NAME];
+	std::vector<uint8_t> pack();
 };
 
 class InvalidCRCFourthTime: public Request {
 public:
 	InvalidCRCFourthTime(const User& u);
 	char file_name[Constants::Sizes_In_Bytes::FILE_NAME];
+	std::vector<uint8_t> pack();
 };
 #endif		
