@@ -16,6 +16,7 @@ class Server:
     users_map:dict[uuid, User]
     PORT:int
     def __init__(self, PORT):
+        self.users_map = {}
         self.PORT = PORT
 
     def wait_for_requests(self):
@@ -39,7 +40,7 @@ class Server:
                 }
 
                 response = handler_dict[req.header.code](req, conn) # type:ignore
-                sock.sendall(response.pack())
+                conn.sendall(response.pack())
 
         except Exception as e:
             print(e)
@@ -50,7 +51,7 @@ class Server:
         self.wait_for_requests()
 
     def handle_registration_request(self, req:Requests.Registration, conn) -> Responses.Response:
-        user_uuid = uuid.uuid4().bytes.decode()
+        user_uuid = uuid.uuid4().bytes
 
         while user_uuid in self.users_map:
             user_uuid = uuid.uuid4().bytes.decode()

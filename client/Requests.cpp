@@ -33,17 +33,14 @@ std::vector<uint8_t> RequestHeader::pack() {
 	uint16_t _code = code;
 	uint32_t _payload_size = payload_size;
 
-	if(!Endian::is_little_endian()) {
-		Endian::flip_endianness(_code);
-		Endian::flip_endianness(_payload_size);
-	}
-
 	result.push_back(version);
 
-	for(int i = 1 ; i <= sizeof(_code) ; i++ )
+	// Send it in little endian
+
+	for(int i = sizeof(_code) ; i >= 1 ; i-- )
 		result.push_back(Hex::get_byte(_code, i));
 
-	for(int i = 1 ; i <= sizeof(_payload_size) ; i++)
+	for(int i = sizeof(_payload_size); i >= 1 ; i--)
 		result.push_back(Hex::get_byte(_payload_size, i));
 
 	return result;
@@ -114,30 +111,19 @@ FileTransfer::FileTransfer(const User& u, uint32_t content_size, uint32_t origin
 
 std::vector<uint8_t> FileTransfer::pack() {
 	std::vector<uint8_t> res = header.pack();
+	
+	// Send it in little endian
+	for(int i = sizeof(content_size); i >= 1 ; i--)
+		res.push_back(Hex::get_byte(content_size, i));
 
-	uint32_t _content_size = content_size;
-	uint32_t _original_file_size = original_file_size;
-	uint16_t _packet_number = packet_number;
-	uint16_t _total_packets = total_packets;
+	for(int i = sizeof(original_file_size) ; i >= 1 ; i--)
+		res.push_back(Hex::get_byte(original_file_size, i));
 
-	if(!Endian::is_little_endian()) {
-		Endian::flip_endianness(_content_size);
-		Endian::flip_endianness(_original_file_size);
-		Endian::flip_endianness(_packet_number);
-		Endian::flip_endianness(_total_packets);
-	}
+	for(int i = sizeof(packet_number) ; i >= 1 ; i--)
+		res.push_back(Hex::get_byte(packet_number, i));
 
-	for(int i = 1 ; i <= sizeof(_content_size) ; i++)
-		res.push_back(Hex::get_byte(_content_size, i));
-
-	for(int i = 1; i <= sizeof(_original_file_size); i++)
-		res.push_back(Hex::get_byte(_original_file_size, i));
-
-	for(int i = 1; i <= sizeof(_packet_number); i++)
-		res.push_back(Hex::get_byte(_packet_number, i));
-
-	for(int i = 1; i <= sizeof(_total_packets); i++)
-		res.push_back(Hex::get_byte(_total_packets, i));
+	for(int i = sizeof(total_packets) ; i >= 1 ; i--)
+		res.push_back(Hex::get_byte(total_packets, i));
 
 	for(int i = 0 ; i < Constants::Sizes_In_Bytes::FILE_NAME ; i++)
 		res.push_back(file_name[i]);

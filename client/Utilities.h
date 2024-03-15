@@ -13,13 +13,27 @@ namespace Hex {
 	std::vector<char> hex_string_to_bytes(const std::string& hex); 
 
 	template <typename intType>
-	uint8_t get_byte(const intType& src, int byte_number) {
+	uint8_t get_byte(const intType& src, const int byte_number) {
 		if(byte_number > sizeof(src))
-			throw std::logic_error("src variable doesn't contain that many bytes.");
+			throw std::logic_error("Src variable doesn't contain that many bytes.");
 
 		uint8_t mask = 0xFF;
 
 		return (uint8_t) (src >> ((sizeof(src) - byte_number) * 8)) & mask;
+	}
+
+	template <typename intType>
+	void copy_bytes(intType& src, const std::vector<uint8_t> bytes) {
+		src = 0;
+
+		if(sizeof(src) != bytes.size())
+			throw std::logic_error("Number of bytes in src variable differs from 'bytes' vector length.");
+
+		for(int i = 0 ; i < sizeof(src) ; i++) {
+			size_t offset = sizeof(src) - (i + 1);
+
+			src |= ( (uint64_t) (bytes[i]) ) << (offset * 8);
+		}
 	}
 }
 

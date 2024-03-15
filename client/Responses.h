@@ -14,6 +14,7 @@ public:
 	uint32_t payload_size;
 
 	ResponseHeader() : version(0), code(0), payload_size(0) { }
+	void unpack(const std::vector<uint8_t>& raw_data);
 
 	ResponseHeader& operator=(const ResponseHeader& other);
 };

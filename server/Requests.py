@@ -1,6 +1,4 @@
 
-# TODO: check that name fields are null terminated. I might have to do this in the cpp code instead of here. i need to think about it
-
 from abc import ABC, abstractmethod
 import struct
 from constants import *
@@ -30,7 +28,7 @@ class Registration(Request):
 
     @staticmethod
     def create_request_from_payload(header:RequestHeader, payload:bytes) -> Request:
-        client_name = struct.unpack("16s", payload)[0]
+        client_name = struct.unpack(f"{FieldsSizes.CLIENT_NAME}s", payload)[0]
 
         return Registration(header, client_name)
 
@@ -47,10 +45,10 @@ class PublicKeyTransfer(Request):
         client_name_size = 255
         public_key_size = 160
 
-        client_name = struct.unpack(f"<{client_name_size}s", payload)[0]
+        client_name = struct.unpack(f"{client_name_size}s", payload)[0]
         payload = payload[client_name_size:]
 
-        public_key = struct.unpack(f"<{public_key_size}s", payload)[0]
+        public_key = struct.unpack(f"{public_key_size}s", payload)[0]
 
         return PublicKeyTransfer(header, client_name, public_key)
 
@@ -64,7 +62,7 @@ class Relogin(Request):
 
     @staticmethod
     def create_request_from_payload(header:RequestHeader, payload:bytes) -> Request:
-        client_name = struct.unpack("<s", payload)[0]
+        client_name = struct.unpack(f"{FieldsSizes.CLIENT_NAME}s", payload)[0]
 
         return Relogin(header, client_name)
 
@@ -88,11 +86,13 @@ class FileTransfer(Request):
 
         payload = payload[offset:]
 
-        file_name = struct.unpack(f"<{FieldsSizes.FILE_NAME}s", payload)[0]
+        file_name = struct.unpack(f"{FieldsSizes.FILE_NAME}s", payload)[0]
 
         payload = payload[FieldsSizes.FILE_NAME:]
 
-        message_content = struct.unpack("<", payload)[0]
+        # Todo: check this
+        #  message_content = struct.unpack("<", payload)[0]
+        message_content = payload
 
         return FileTransfer(header, content_size, original_size, packet_number, total_packets, file_name, message_content)
 
@@ -110,7 +110,7 @@ class ValidCRC(Request):
 
     @staticmethod
     def create_request_from_payload(header:RequestHeader, payload:bytes) -> Request:
-        file_name = struct.unpack(f"<{FieldsSizes.FILE_NAME}s", payload)[0]
+        file_name = struct.unpack(f"{FieldsSizes.FILE_NAME}s", payload)[0]
 
         return ValidCRC(header, file_name)
     def __init__(self, header:RequestHeader, file_name):
@@ -122,7 +122,7 @@ class InvalidCRC(Request):
 
     @staticmethod
     def create_request_from_payload(header:RequestHeader, payload:bytes) -> Request:
-        file_name = struct.unpack(f"<{FieldsSizes.FILE_NAME}s", payload)[0]
+        file_name = struct.unpack(f"{FieldsSizes.FILE_NAME}s", payload)[0]
 
         return ValidCRC(header, file_name)
 
@@ -135,7 +135,7 @@ class InvalidCRCFourthTime(Request):
 
     @staticmethod
     def create_request_from_payload(header:RequestHeader, payload:bytes) -> Request:
-        file_name = struct.unpack(f"<{FieldsSizes.FILE_NAME}s", payload)[0]
+        file_name = struct.unpack(f"{FieldsSizes.FILE_NAME}s", payload)[0]
 
         return ValidCRC(header, file_name)
 
@@ -157,7 +157,7 @@ def parse_request(conn) -> Request:
     try:
         request_bytes = conn.recv(FieldsSizes.HEADER)  # Get the header
 
-        client_id = struct.unpack(f"<{FieldsSizes.CLIENT_ID}s", request_bytes[:FieldsSizes.CLIENT_ID])[0]
+        client_id = struct.unpack(f"{FieldsSizes.CLIENT_ID}s", request_bytes[:FieldsSizes.CLIENT_ID])[0]
 
         request_bytes = request_bytes[FieldsSizes.CLIENT_ID:]
 
