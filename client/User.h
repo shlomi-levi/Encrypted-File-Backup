@@ -35,6 +35,5 @@ public:
 	User(string server_address, string server_port, string user_name, string file_path, string UUID="", string private_key="");
 
 	void start();
-	void decrypt_key(unsigned char* dest, size_t dest_length, std::vector<char>encrypted_aes_key_vector);
 };
 #endif

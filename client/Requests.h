@@ -61,13 +61,14 @@ public:
 
 class FileTransfer: public Request {
 public:
-	FileTransfer(const User&, uint32_t, uint32_t, uint16_t, uint16_t);
+	FileTransfer(const User&, uint32_t, uint16_t, uint16_t, const string&);
 
 	uint32_t content_size;
 	uint32_t original_file_size;
 	uint16_t packet_number;
 	uint16_t total_packets;
 	char file_name[Constants::Sizes_In_Bytes::FILE_NAME];
+	string content;
 	std::vector<uint8_t> pack();
 };
 

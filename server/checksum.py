@@ -73,14 +73,14 @@ def memcrc(b):
         s = UNSIGNED(s << 8) ^ crctab[(s >> 24) ^ c]
     return UNSIGNED(~s)
 
-def get_checksum(file):
-    try:
-        f = open(file, "rb")
-        buffer = f.read()
-        f.close()
-
-    except Exception as e:
-        raise e
-
-    return memcrc(buffer)
+# def get_checksum(file):
+#     try:
+#         f = open(file, "rb")
+#         buffer = f.read()
+#         f.close()
+#
+#     except Exception as e:
+#         raise e
+#
+#     return memcrc(buffer)
 

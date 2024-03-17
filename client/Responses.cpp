@@ -42,22 +42,75 @@ void ResponseHeader::unpack(const std::vector<uint8_t>& raw_data) {
 	Hex::copy_bytes(payload_size, _payload_size);
 }
 
+void RegistrationSuccess::unpack_payload(const std::vector<uint8_t>& bytes) {
+	if(Constants::Sizes_In_Bytes::CLIENT_ID != bytes.size())
+		throw std::logic_error("Invalid payload size.");
+	
+	for(int i = 0 ; i < Constants::Sizes_In_Bytes::CLIENT_ID ; i++)
+		client_id[i] = bytes[i];
+}
+
+void PublicKeyRecieved::unpack_payload(const std::vector<uint8_t>& bytes) {
+	for(int i = 0; i < Constants::Sizes_In_Bytes::CLIENT_ID; i++)
+		client_id[i] = bytes[i];
+	
+
+	for(int i = Constants::Sizes_In_Bytes::CLIENT_ID ; i < bytes.size() ; i++)
+		encrypted_aes_key += bytes[i];
+}
+
+void FileRecieved::unpack_payload(const std::vector<uint8_t>& bytes) {
+	for(int i = 0; i < Constants::Sizes_In_Bytes::CLIENT_ID; i++)
+		client_id[i] = bytes[i];
+
+	size_t offset = Constants::Sizes_In_Bytes::CLIENT_ID;
+
+	std::vector<uint8_t> _content_size (Constants::Sizes_In_Bytes::FILE_CONTENT_SIZE);
+	std::vector<uint8_t> _checksum (Constants::Sizes_In_Bytes::CHECKSUM);
+
+	for(int i = 0, j = _content_size.size() + offset - 1; i < _content_size.size(); i++, j--) {
+		_content_size[i] = bytes[j];
+		offset++;
+	}
+
+	for(int i = 0 ; i < Constants::Sizes_In_Bytes::FILE_NAME ; i++)
+		file_name[i] = bytes[i + offset];
+
+	offset += Constants::Sizes_In_Bytes::FILE_NAME;
+
+	for(int i = 0, j = _checksum.size() + offset - 1; i < _checksum.size(); i++, j--) {
+		_checksum[i] = bytes[j];
+		offset++;
+	}
+
+	Hex::copy_bytes(content_size, _content_size);
+	Hex::copy_bytes(checksum, _checksum);
+}
+
+void MessageRecieved::unpack_payload(const std::vector<uint8_t>& bytes) {
+	for(int i = 0; i < Constants::Sizes_In_Bytes::CLIENT_ID; i++)
+		client_id[i] = bytes[i];
+}
+
+void AllowRelogin::unpack_payload(const std::vector<uint8_t>& bytes) {
+	for(int i = 0; i < Constants::Sizes_In_Bytes::CLIENT_ID; i++)
+		client_id[i] = bytes[i];
+
+	for(int i = Constants::Sizes_In_Bytes::CLIENT_ID ; i < bytes.size() ; i++)
+		encrypted_aes_key += bytes[i];
+}
+
+void DeclineRelogin::unpack_payload(const std::vector<uint8_t>& bytes) {
+	for(int i = 0; i < Constants::Sizes_In_Bytes::CLIENT_ID; i++)
+		client_id[i] = bytes[i];
+}
+
 std::unique_ptr<Response> Response::get_response(tcp::socket& s, User* u) {
 	ResponseHeader header;
 	std::vector<uint8_t> header_bytes (Constants::Responses::HEADER_SIZE);
+	
 	boost::asio::read(s, boost::asio::buffer(header_bytes));
 	header.unpack(header_bytes);
-
-	static const std::unordered_map<int, int> sizeofTable = {
-		{Constants::Responses::codes::RegistrationSuccess, sizeof(RegistrationSuccess)},
-		{Constants::Responses::codes::RegistrationFailure, sizeof(RegistrationFailure)},
-		{Constants::Responses::codes::PublicKeyRecieved, sizeof(PublicKeyRecieved)},
-		{Constants::Responses::codes::FileRecieved, sizeof(FileRecieved)},
-		{Constants::Responses::codes::MessageRecieved, sizeof(MessageRecieved)},
-		{Constants::Responses::codes::AllowRelogin, sizeof(AllowRelogin)},
-		{Constants::Responses::codes::DeclineRelogin, sizeof(DeclineRelogin)},
-		{Constants::Responses::codes::GeneralServerError, sizeof(GeneralServerError)},
-	};
 
 	std::unique_ptr<Response> res;
 
@@ -104,35 +157,7 @@ std::unique_ptr<Response> Response::get_response(tcp::socket& s, User* u) {
 	std::vector<uint8_t> payload_bytes (res->header.payload_size);
 	boost::asio::read(s, boost::asio::buffer(payload_bytes));
 
-	res.unpack_payload(payload_bytes);
+	res->unpack_payload(payload_bytes);
 
-	if(header.code == Constants::Responses::codes::PublicKeyRecieved) {
-		PublicKeyRecieved* pkr = static_cast<PublicKeyRecieved*>(res.get());
-
-		boost::asio::read(s, boost::asio::buffer(pkr->client_id, Constants::Sizes_In_Bytes::CLIENT_ID));
-
-		// Todo: debug this part to see it works correctly:
-		int encrypted_aes_key_length = res->header.payload_size - Constants::Sizes_In_Bytes::CLIENT_ID;
-		std::vector<char> encrypted_aes_key_vector(encrypted_aes_key_length);
-
-		boost::asio::read(s, boost::asio::buffer(&encrypted_aes_key_vector, encrypted_aes_key_length));
-
-		u->decrypt_key(pkr->decrypted_aes_key, Constants::Sizes_In_Bytes::AES_KEY, encrypted_aes_key_vector);
-	}
-	
-	else {
-		boost::asio::read(s, boost::asio::buffer(res.get() + sizeof(ResponseHeader), sizeof(sizeofTable.at(header.code)) - sizeof(ResponseHeader)));
-	}
-
-	//if(!Endian::is_little_endian()) {
-	//	if(header.code == Constants::Responses::codes::FileRecieved) { // The order is important because we flip header.code next. keep this if statement here.
-	//		FileRecieved* temp = static_cast<FileRecieved*>(res.get());
-	//		Endian::flip_endianness(temp->content_size);
-	//		Endian::flip_endianness(temp->checksum);
-	//	}
-	//	Endian::flip_endianness(header.code);
-	//	Endian::flip_endianness(header.version);
-	//	Endian::flip_endianness(header.payload_size);
-	//}
 	return res;
 }

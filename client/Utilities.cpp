@@ -44,7 +44,7 @@ void copy_from_string_to_array(char array[], int len, const std::string& src, bo
 
 	src_string_len = src.length();
 
-	for(i = 0 ; i < len ; i++)
+	for(i = 0; i < len; i++)
 		array[i] = '\0'; // fill with zeros.
 
 	if(!add_terminating_zero && src_string_len != len)
@@ -53,7 +53,7 @@ void copy_from_string_to_array(char array[], int len, const std::string& src, bo
 	else if(add_terminating_zero && src_string_len + 1 > len)
 		throw std::invalid_argument("Not enough cells in array to add terminating zero");
 
-	for(i = 0 ; i < src_string_len ; i++)
+	for(i = 0; i < src_string_len; i++)
 		array[i] = src[i];
 
 	if(add_terminating_zero)

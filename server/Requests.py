@@ -42,14 +42,7 @@ class PublicKeyTransfer(Request):
 
     @staticmethod
     def create_request_from_payload(header:RequestHeader, payload:bytes) -> Request:
-        client_name_size = 255
-        public_key_size = 160
-
-        client_name = struct.unpack(f"{client_name_size}s", payload)[0]
-        payload = payload[client_name_size:]
-
-        public_key = struct.unpack(f"{public_key_size}s", payload)[0]
-
+        client_name, public_key = struct.unpack(f"{FieldsSizes.CLIENT_NAME}s{FieldsSizes.PUBLIC_KEY}s", payload)
         return PublicKeyTransfer(header, client_name, public_key)
 
     def __init__(self, header:RequestHeader, client_name, public_key):
@@ -80,15 +73,17 @@ class FileTransfer(Request):
 
     @staticmethod
     def create_request_from_payload(header:RequestHeader, payload:bytes) -> Request:
-        content_size, original_size, packet_number, total_packets = struct.unpack("<IIHH", payload)
-
         offset = FieldsSizes.CONTENT_SIZE + FieldsSizes.ORIGINAL_CONTENT_SIZE + FieldsSizes.PACKET_NUMBER + FieldsSizes.TOTAL_PACKETS
+
+        content_size, original_size, packet_number, total_packets = struct.unpack("<IIHH", payload[0:offset])
 
         payload = payload[offset:]
 
-        file_name = struct.unpack(f"{FieldsSizes.FILE_NAME}s", payload)[0]
+        offset = FieldsSizes.FILE_NAME
 
-        payload = payload[FieldsSizes.FILE_NAME:]
+        file_name = struct.unpack(f"{FieldsSizes.FILE_NAME}s", payload[0:offset])[0]
+
+        payload = payload[offset:]
 
         # Todo: check this
         #  message_content = struct.unpack("<", payload)[0]
@@ -157,11 +152,7 @@ def parse_request(conn) -> Request:
     try:
         request_bytes = conn.recv(FieldsSizes.HEADER)  # Get the header
 
-        client_id = struct.unpack(f"{FieldsSizes.CLIENT_ID}s", request_bytes[:FieldsSizes.CLIENT_ID])[0]
-
-        request_bytes = request_bytes[FieldsSizes.CLIENT_ID:]
-
-        version, code, payload_size = struct.unpack("<BHL", request_bytes)
+        client_id, version, code, payload_size = struct.unpack(f"<{FieldsSizes.CLIENT_ID}sBHL", request_bytes)
 
         # if code not in Request_Codes_To_Handlers:
         # TODO: output error, invalid code

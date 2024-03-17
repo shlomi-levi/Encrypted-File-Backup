@@ -80,7 +80,8 @@ class FileRecieved(Response):
             # content size - 4 bytes
             # file name - 255 bytes
             # cksum - 4 bytes
-        return struct.pack("<16sI255s4s", self.client_id, self.content_size, self.file_name, self.checksum)
+        # TODO: work on this
+        return struct.pack("<16sI255sL", self.client_id, self.content_size, self.file_name, self.checksum)
 
     def __init__(self, client_id:str, content_size:int, file_name:str, cksum:int):
         PAYLOAD_SIZE:int = constants.FieldsSizes.CLIENT_ID + constants.FieldsSizes.CONTENT_SIZE + constants.FieldsSizes.FILE_NAME + constants.FieldsSizes.CHECKSUM

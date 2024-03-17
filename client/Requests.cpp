@@ -98,13 +98,15 @@ std::vector<uint8_t> Relogin::pack() {
 	return res;
 }
 
-FileTransfer::FileTransfer(const User& u, uint32_t content_size, uint32_t original_file_size, uint16_t packet_number, uint16_t total_packets) {
+FileTransfer::FileTransfer(const User& u, uint32_t original_file_size, uint16_t packet_number, uint16_t total_packets, const string& content) {
 
-	this->header.init(u.uuid, Constants::Requests::codes::FileTransfer, Constants::Requests::payload_sizes::FileTransfer);
-	this->content_size = content_size;
+	this->header.init(u.uuid, Constants::Requests::codes::FileTransfer, Constants::Requests::payload_sizes::FileTransferWithoutContent + static_cast<uint32_t>(content.size()));
+
+	this->content_size = static_cast<uint32_t>(content.size());
 	this->original_file_size = original_file_size;
-	this->packet_number = packet_number;
-	this->total_packets = total_packets;
+	this->packet_number = static_cast<uint16_t>(packet_number);
+	this->total_packets = static_cast<uint16_t>(total_packets);
+	this->content = content;
 
 	std::copy(u.file_name, u.file_name + Constants::Sizes_In_Bytes::FILE_NAME, this->file_name);
 }
@@ -128,7 +130,8 @@ std::vector<uint8_t> FileTransfer::pack() {
 	for(int i = 0 ; i < Constants::Sizes_In_Bytes::FILE_NAME ; i++)
 		res.push_back(file_name[i]);
 
-	// we send the content after.
+	for(int i = 0 ; i < content_size ; i ++)
+		res.push_back(content[i]);
 
 	return res;
 }

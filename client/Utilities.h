@@ -3,6 +3,8 @@
 #define _UTILITIES_GUARD
 
 #include <vector>
+#include <string>
+#include <iostream>
 #include "Protocol.h"
 
 using std::string;

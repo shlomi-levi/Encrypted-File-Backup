@@ -18,8 +18,9 @@ namespace Constants {
 		constexpr int CLIENT_ID = 16;
 		constexpr int CLIENT_NAME = 255;
 
-		constexpr int PUBLIC_KEY = 128;
+		constexpr int PUBLIC_KEY = 160;
 		constexpr int AES_KEY = Sizes_In_Bits::AES_KEY / 8; // byte is always 8 bits.
+		constexpr int RSA_KEY = Sizes_In_Bits::RSA_KEY / 8; // byte is always 8 bits.
 
 		constexpr int FILE_NAME = 255;
 		constexpr int FILE_CONTENT_SIZE = 4;
@@ -64,9 +65,8 @@ namespace Constants {
 			constexpr int PublicKeyTransfer = Sizes_In_Bytes::CLIENT_NAME + Sizes_In_Bytes::PUBLIC_KEY;
 			constexpr int Relogin = Sizes_In_Bytes::CLIENT_NAME;
 
-			constexpr int FileTransfer = Sizes_In_Bytes::FILE_CONTENT_SIZE + Sizes_In_Bytes::FILE_CONTENT_ORIGINAL_SIZE +
-			Sizes_In_Bytes::PACKET_NUMBER + Sizes_In_Bytes::TOTAL_PACKETS + Sizes_In_Bytes::FILE_NAME +
-			Sizes_In_Bytes::FILE_TRANSFER_BUFFER;
+			constexpr int FileTransferWithoutContent = Sizes_In_Bytes::FILE_CONTENT_SIZE + Sizes_In_Bytes::FILE_CONTENT_ORIGINAL_SIZE +
+			Sizes_In_Bytes::PACKET_NUMBER + Sizes_In_Bytes::TOTAL_PACKETS + Sizes_In_Bytes::FILE_NAME;
 
 			constexpr int ValidCRC = Sizes_In_Bytes::CLIENT_NAME;
 			constexpr int InvalidCRC = Sizes_In_Bytes::CLIENT_NAME;

@@ -16,6 +16,8 @@
 using std::cerr;
 using std::cout;
 using std::endl;
+using std::cbegin;
+using std::cend;
 
 User::User(string server_address, string server_port, string user_name, string file_path, string user_uuid, string private_key) : aes_object(nullptr) {
 	has_uuid = false;
@@ -56,30 +58,21 @@ void User::get_file_name() {
 	size_t offset = 0;
 	size_t temp = this->file_path.find("\\", offset);
 
-	while(temp != std::string::npos) {
-		offset = temp;
-		temp = this->file_path.find("\\", offset);
-	}
+	string fname;
 
-	string fname = this->file_path.substr(offset + 1);
+	if(temp == std::string::npos)
+		fname = this->file_path;
+
+	else {
+		while(temp != std::string::npos) {
+			offset = temp;
+			temp = this->file_path.find("\\", offset);
+		}
+
+		fname = this->file_path.substr(offset + 1);
+	}
 
 	copy_from_string_to_array(this->file_name, Constants::Sizes_In_Bytes::FILE_NAME, fname, true);
-}
-
-void User::decrypt_key(unsigned char* dest, size_t dest_length, std::vector<char>encrypted_aes_key_vector) {
-	string encrypted_aes_key_string = "";
-
-	for(int i = 0; i < encrypted_aes_key_vector.size(); i++)
-		encrypted_aes_key_string += encrypted_aes_key_vector[i];
-
-	string decrypted_aes_key = rsa_object->decrypt(encrypted_aes_key_string);
-
-	if(decrypted_aes_key.size() != dest_length) {
-		// Todo: Throw error that the encrypted size doesn't match the aes_key size.
-	}
-
-	for(int i = 0 ; i < dest_length ; i++)
-		dest[i] = decrypted_aes_key[i];
 }
 
 void User::handle_relogin(tcp::socket& s) {
@@ -98,15 +91,18 @@ void User::handle_relogin(tcp::socket& s) {
 	if(res->header.code == Constants::Responses::codes::AllowRelogin) {
 		AllowRelogin* relogin_response = static_cast<AllowRelogin*>(res.get());
 
-		int encrypted_aes_key_length = res->header.payload_size - Constants::Sizes_In_Bytes::CLIENT_ID;
-		std::vector<char> encrypted_aes_key_vector(encrypted_aes_key_length);
+		string decrypted_aes_key = rsa_object->decrypt(relogin_response->encrypted_aes_key);
+		
+		unsigned char key[Constants::Sizes_In_Bytes::AES_KEY];
 
-		boost::asio::read(s, boost::asio::buffer(&encrypted_aes_key_vector, encrypted_aes_key_length));
+		if(decrypted_aes_key.size() != Constants::Sizes_In_Bytes::AES_KEY) {
+			throw std::logic_error("decrypted aes key size differs from " + Constants::Sizes_In_Bytes::AES_KEY);
+		}
 
-		unsigned char decrypted_key[Constants::Sizes_In_Bytes::AES_KEY];
-		decrypt_key(decrypted_key, Constants::Sizes_In_Bytes::AES_KEY, encrypted_aes_key_vector);
+		for(int i = 0; i < decrypted_aes_key.size(); i++)
+			key[i] = decrypted_aes_key[i];
 
-		aes_object = std::make_unique<AESWrapper>(decrypted_key, Constants::Sizes_In_Bytes::AES_KEY);
+		aes_object = std::make_unique<AESWrapper>(key, Constants::Sizes_In_Bytes::AES_KEY);
 
 		std::copy(relogin_response->client_id, relogin_response->client_id + Constants::Sizes_In_Bytes::CLIENT_ID, uuid);
 
@@ -123,7 +119,21 @@ void User::handle_public_key_transfer(tcp::socket& s) {
 	if(res->header.code == Constants::Responses::codes::PublicKeyRecieved) {
 		PublicKeyRecieved* pkr = static_cast<PublicKeyRecieved*>(res.get());
 
-		aes_object = std::make_unique<AESWrapper>(pkr->decrypted_aes_key, Constants::Sizes_In_Bytes::AES_KEY);
+		string decrypted_aes_key = rsa_object->decrypt(pkr->encrypted_aes_key);
+
+		unsigned char key[Constants::Sizes_In_Bytes::AES_KEY];
+
+		if(decrypted_aes_key.size() != Constants::Sizes_In_Bytes::AES_KEY) {
+			throw std::logic_error("decrypted aes key size differs from " + Constants::Sizes_In_Bytes::AES_KEY);
+		}
+
+		for(int i = 0 ; i < decrypted_aes_key.size() ; i++)
+			key[i] = decrypted_aes_key[i];
+
+		aes_object = std::make_unique<AESWrapper>(key, Constants::Sizes_In_Bytes::AES_KEY);
+
+		std::copy(pkr->client_id, pkr->client_id + Constants::Sizes_In_Bytes::CLIENT_ID, uuid);
+
 		return;
 	}
 
@@ -164,6 +174,9 @@ void User::handle_file_transfer(tcp::socket& s) {
 
 	char buffer[Constants::Sizes_In_Bytes::FILE_TRANSFER_BUFFER];
 
+	for(size_t i = 0 ; i < Constants::Sizes_In_Bytes::FILE_TRANSFER_BUFFER ; i++)
+		buffer[i] = '\0';
+
 	try {
 		f.open(file_name, std::ios::in);
 
@@ -179,12 +192,14 @@ void User::handle_file_transfer(tcp::socket& s) {
 			packet_count += 1;
 
 			f.read(buffer, Constants::Sizes_In_Bytes::FILE_TRANSFER_BUFFER);
-			string encrypted_text = aes_object->encrypt(buffer, static_cast<unsigned int>(f.gcount()));
 
-			FileTransfer req {*this, static_cast<uint32_t>(encrypted_text.size()), static_cast<uint32_t>(f.gcount()), packet_count, total_packets};
+			unsigned int length = strlen(buffer);
+
+			string encrypted_text = aes_object->encrypt(buffer, length);
+			
+			FileTransfer req {*this, static_cast<uint32_t>(length), packet_count, total_packets, encrypted_text};
 
 			boost::asio::write(s, boost::asio::buffer(req.pack()));
-			boost::asio::write(s, boost::asio::buffer(&encrypted_text, encrypted_text.size()));
 		}
 	}
 

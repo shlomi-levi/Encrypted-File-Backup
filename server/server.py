@@ -8,7 +8,7 @@ from os.path import basename, getsize
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
-from checksum import get_checksum
+from checksum import memcrc
 
 # TODO: GO OVER ALL HANDLERS AGAIN TO SEE I DIDNT MISS SOMETHING.
 
@@ -19,36 +19,37 @@ class Server:
         self.users_map = {}
         self.PORT = PORT
 
-    def wait_for_requests(self):
+    def wait_for_requests(self, conn):
+        while True:
+            req:Requests.Request = Requests.parse_request(conn)
+
+            handler_dict = {
+                RequestCodes.REGISTRATION : self.handle_registration_request,
+                RequestCodes.PUBLIC_KEY_TRANSFER: self.handle_public_key_transfer_request,
+                RequestCodes.RELOGIN: self.handle_relogin_request,
+                RequestCodes.FILETRANSFER: self.handle_file_transfer_request,
+                RequestCodes.VALIDCRC: self.handle_valid_crc_reqeust,
+                RequestCodes.INVALIDCRC: self.handle_invalid_crc_request,
+                RequestCodes.INVALIDCRCFOURTHTIME: self.handle_invalid_crc_fourth_time_request
+            }
+
+            response = handler_dict[req.header.code](req, conn) # type:ignore
+            conn.sendall(response.pack())
+
+
+    def start(self):
+        # TODO: add support to multiple clients
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-                sock.bind( ('localhost', self.PORT))
+                sock.bind(('localhost', self.PORT))
                 sock.listen()
-                # sock.setblocking()
                 conn, addr = sock.accept()
-                # TODO: add support to multiple clients
-                req:Requests.Request = Requests.parse_request(conn)
-
-                handler_dict = {
-                    RequestCodes.REGISTRATION : self.handle_registration_request,
-                    RequestCodes.PUBLIC_KEY_TRANSFER: self.handle_public_key_transfer_request,
-                    RequestCodes.RELOGIN: self.handle_relogin_request,
-                    RequestCodes.FILETRANSFER: self.handle_file_transfer_request,
-                    RequestCodes.VALIDCRC: self.handle_valid_crc_reqeust,
-                    RequestCodes.INVALIDCRC: self.handle_invalid_crc_request,
-                    RequestCodes.INVALIDCRCFOURTHTIME: self.handle_invalid_crc_fourth_time_request
-                }
-
-                response = handler_dict[req.header.code](req, conn) # type:ignore
-                conn.sendall(response.pack())
+                self.wait_for_requests(conn)
 
         except Exception as e:
             print(e)
             if sock:
                 sock.close()
-
-    def start(self):
-        self.wait_for_requests()
 
     def handle_registration_request(self, req:Requests.Registration, conn) -> Responses.Response:
         user_uuid = uuid.uuid4().bytes
@@ -72,8 +73,7 @@ class Server:
         aes_key = get_random_bytes(FieldsSizes.AES_KEY)
         u.aes_key = aes_key
 
-        rsa_encrypter = PKCS1_OAEP.new(RSA.importKey(req.public_key))
-        encrypted_aes_key:bytes = rsa_encrypter.encrypt(aes_key)
+        encrypted_aes_key:bytes = PKCS1_OAEP.new(RSA.importKey(req.public_key)).encrypt(aes_key)
 
         return Responses.PublicKeyRecieved(req.header.client_id, encrypted_aes_key)
 
@@ -93,26 +93,31 @@ class Server:
         if req.header.client_id not in self.users_map:
             return Responses.GeneralServerError()
 
-        file_path = f"{req.header.client_id}/{basename(req.file_name)}"
+        file_path = "my_product.docx"
+        # Todo: change this
+        # file_path = f"{req.header.client_id}/{basename(req.file_name)}"
 
         user = self.users_map[req.header.client_id]
         cipher = AES.new(user.aes_key, AES.MODE_CBC, iv=b'\x00' * 16)
 
         try:
-            with open(file_path, "wb") as f:
-                while True:
-                    decrypted_message:bytes = cipher.decrypt(req.message_content)
-                    f.write(decrypted_message)
+            open_mode = "wb" if req.packet_number == 0 else "ab"
 
-                    if req.packet_number >= req.total_packets:
-                        break
+            with open(file_path, open_mode) as f:
+                decrypted_message:bytes = cipher.decrypt(req.message_content)
+                decrypted_message = decrypted_message[0:req.original_file_size] # Todo: remember to check if i need to change this
+                f.write(decrypted_message) # type: ignore
 
-                    req = Requests.parse_request(conn)
+                # TODO: REMEMBER TO CHECK IF I NEED TO CHANGE THIS:
+                # if req.packet_number >= req.total_packets:
+                #     break
+
+                    # req = Requests.parse_request(conn)
 
         except:
             return Responses.GeneralServerError()
 
-        return Responses.FileRecieved(req.header.client_id, getsize(file_path), basename(req.file_name), get_checksum(file_path))
+        return Responses.FileRecieved(req.header.client_id, getsize(file_path), basename(req.file_name), memcrc(decrypted_message))
 
     def handle_valid_crc_reqeust(self, req:Requests.ValidCRC, conn) -> Responses.Response:
         return Responses.MessageRecieved(req.header.client_id)
