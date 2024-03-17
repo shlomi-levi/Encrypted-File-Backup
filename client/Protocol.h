@@ -33,6 +33,7 @@ namespace Constants {
 	};
 
 	constexpr int8_t CLIENT_VERSION = 3;
+	constexpr int TRANSFER_RETRY_COUNT = 4;
 
 	static_assert(sizeof(CLIENT_VERSION) == Sizes_In_Bytes::CLIENT_VERSION, "Client version constant has the wrong type. check Constants::SIZES_IN_BYTES::CLIENT_VERSION in 'Protocol.h' to see how many bytes it should have.");
 

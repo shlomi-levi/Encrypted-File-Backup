@@ -172,13 +172,10 @@ void User::handle_registration(tcp::socket& s) {
 void User::handle_file_transfer(tcp::socket& s) {
 	std::ifstream f;
 
-	char buffer[Constants::Sizes_In_Bytes::FILE_TRANSFER_BUFFER];
-
-	for(size_t i = 0 ; i < Constants::Sizes_In_Bytes::FILE_TRANSFER_BUFFER ; i++)
-		buffer[i] = '\0';
+	uint8_t buffer[Constants::Sizes_In_Bytes::FILE_TRANSFER_BUFFER];
 
 	try {
-		f.open(file_name, std::ios::in);
+		f.open(file_name, std::ios::in | std::ios::binary);
 
 		if(!f.is_open()) {
 			throw std::logic_error("Couldn't open the file " + Constants::TRANSFER_FILE_PATH);
@@ -186,16 +183,21 @@ void User::handle_file_transfer(tcp::socket& s) {
 		}
 
 		uint16_t packet_count = 0;
-		uint16_t total_packets = static_cast<uint16_t>(ceil(std::filesystem::file_size(file_name) / Constants::Sizes_In_Bytes::FILE_TRANSFER_BUFFER));
+
+		std::filesystem::path _path(file_name);
+
+		float _total_packets = float(std::filesystem::file_size(_path)) / Constants::Sizes_In_Bytes::FILE_TRANSFER_BUFFER;
+
+		uint16_t total_packets = static_cast<uint16_t>(int(ceil(_total_packets)));
 
 		while(!f.eof()) {
 			packet_count += 1;
 
-			f.read(buffer, Constants::Sizes_In_Bytes::FILE_TRANSFER_BUFFER);
+			f.read(reinterpret_cast<char*>(buffer), Constants::Sizes_In_Bytes::FILE_TRANSFER_BUFFER);
 
-			unsigned int length = strlen(buffer);
+			unsigned int length = f.gcount();
 
-			string encrypted_text = aes_object->encrypt(buffer, length);
+			string encrypted_text = aes_object->encrypt(reinterpret_cast<char*>(buffer), length);
 			
 			FileTransfer req {*this, static_cast<uint32_t>(length), packet_count, total_packets, encrypted_text};
 
@@ -208,8 +210,13 @@ void User::handle_file_transfer(tcp::socket& s) {
 		if(s.is_open())
 			s.close();
 
+		if(f.is_open())
+			f.close();
+
 		exit(1);
 	}
+
+	f.close();
 }
 
 void User::start() {
@@ -226,12 +233,15 @@ void User::start() {
 		else
 			handle_registration(s);
 
+		cout << "Client is now logged in, and keys were transferred" << endl;
+		cout << "Transferring file:" << endl;
+
 		// Now the client is logged in and has a key.
 		unsigned long checksum_result = calculate_crc(file_name);
 
 		int failed_transfers_counter = 0;
 
-		while(failed_transfers_counter < 4) {
+		while(failed_transfers_counter < Constants::TRANSFER_RETRY_COUNT) {
 			handle_file_transfer(s);
 			
 			std::unique_ptr<Response> res = Response::get_response(s);
@@ -242,9 +252,14 @@ void User::start() {
 
 			if(res->header.code == Constants::Responses::codes::FileRecieved) {
 				FileRecieved* fr = static_cast<FileRecieved*>(res.get());
-				if(fr->checksum == checksum_result)
+				if(fr->checksum == checksum_result) {
+					cout << "File transferred successfully." << endl;
+					ValidCRC req {*this};
+					boost::asio::write(s, boost::asio::buffer(req.pack()));
 					break;
+				}
 
+				cout << "Transfer failed, trying again." << endl;
 				failed_transfers_counter++;
 
 				InvalidCRC req {*this};
@@ -252,7 +267,8 @@ void User::start() {
 			}
 		}
 
-		if(failed_transfers_counter == 4) {
+		if(failed_transfers_counter == Constants::TRANSFER_RETRY_COUNT) {
+			cout << "Transfer failed " << Constants::TRANSFER_RETRY_COUNT << " times." << endl;
 			InvalidCRCFourthTime req {*this};
 			boost::asio::write(s, boost::asio::buffer(req.pack()));
 		}
@@ -273,4 +289,6 @@ void User::start() {
 	}
 
 	s.close();
+
+	cout << "Program finished." << endl;
 }

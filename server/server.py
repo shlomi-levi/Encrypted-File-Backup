@@ -8,7 +8,7 @@ from os.path import basename, getsize
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
-from checksum import memcrc
+from checksum import get_checksum
 
 # TODO: GO OVER ALL HANDLERS AGAIN TO SEE I DIDNT MISS SOMETHING.
 
@@ -34,7 +34,13 @@ class Server:
             }
 
             response = handler_dict[req.header.code](req, conn) # type:ignore
-            conn.sendall(response.pack())
+
+            if response:
+                conn.sendall(response.pack())
+
+            if req.header.code == RequestCodes.VALIDCRC or req.header.code == RequestCodes.INVALIDCRCFOURTHTIME:
+                conn.close()
+                break
 
 
     def start(self):
@@ -100,30 +106,37 @@ class Server:
         user = self.users_map[req.header.client_id]
         cipher = AES.new(user.aes_key, AES.MODE_CBC, iv=b'\x00' * 16)
 
+        f = None
+
         try:
-            open_mode = "wb" if req.packet_number == 0 else "ab"
+            open_mode = "wb" if req.packet_number == 1 else "ab"
 
-            with open(file_path, open_mode) as f:
-                decrypted_message:bytes = cipher.decrypt(req.message_content)
-                decrypted_message = decrypted_message[0:req.original_file_size] # Todo: remember to check if i need to change this
-                f.write(decrypted_message) # type: ignore
+            f = open(file_path, open_mode)
+            decrypted_message:bytes = cipher.decrypt(req.message_content)[0:req.original_file_size]
+            f.write(decrypted_message) # type: ignore
 
-                # TODO: REMEMBER TO CHECK IF I NEED TO CHANGE THIS:
-                # if req.packet_number >= req.total_packets:
-                #     break
-
-                    # req = Requests.parse_request(conn)
+            # TODO: REMEMBER TO CHECK IF I NEED TO CHANGE THIS:
+            if req.packet_number >= req.total_packets:
+                f.close()
+                return Responses.FileRecieved(req.header.client_id, getsize(file_path), basename(req.file_name),
+                get_checksum(file_path))
+                # req = Requests.parse_request(conn)
 
         except:
-            return Responses.GeneralServerError()
+            if f:
+                f.close()
 
-        return Responses.FileRecieved(req.header.client_id, getsize(file_path), basename(req.file_name), memcrc(decrypted_message))
+        if f:
+            f.close()
+
+        # return Responses.GeneralServerError() # TODO: CHECK IF i need this
 
     def handle_valid_crc_reqeust(self, req:Requests.ValidCRC, conn) -> Responses.Response:
         return Responses.MessageRecieved(req.header.client_id)
 
     def handle_invalid_crc_request(self, req:Requests.InvalidCRC, conn) -> Responses.Response:
-        pass # we don't need to do anything actually in this case
+        # We don't need to do anything in this case.
+        return None # type:ignore
 
     def handle_invalid_crc_fourth_time_request(self, req:Requests.InvalidCRCFourthTime, conn) -> Responses.Response:
         return Responses.MessageRecieved(req.header.client_id)
