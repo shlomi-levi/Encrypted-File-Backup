@@ -31,14 +31,14 @@ class Response(ABC):
         pass
 
 class RegisterationSuccess(Response):
-    client_id:str
+    client_id:bytes
 
     def pack_payload(self) -> bytes:
         # Small endian of:
             # client id - 16 bytes
         return struct.pack(f"<{constants.FieldsSizes.CLIENT_ID}s", self.client_id)
 
-    def __init__(self, client_id:str):
+    def __init__(self, client_id:bytes):
         PAYLOAD_SIZE = constants.FieldsSizes.CLIENT_ID
 
         self.header = ResponseHeader(constants.ResponseCodes.RegistrationSuccess, PAYLOAD_SIZE)
@@ -52,7 +52,7 @@ class RegistrationFailure(Response):
         self.header = ResponseHeader(constants.ResponseCodes.RegistrationFailure, 0)
 
 class PublicKeyRecieved(Response):
-    client_id:str
+    client_id:bytes
     encrypted_aes_key:bytes
 
     def pack_payload(self) -> bytes:
@@ -61,7 +61,7 @@ class PublicKeyRecieved(Response):
             # encrypted_aes_key - dynamic size.
         return struct.pack(f"<{constants.FieldsSizes.CLIENT_ID}s{len(self.encrypted_aes_key)}s", self.client_id, self.encrypted_aes_key)
 
-    def __init__(self, client_id: str, encrypted_aes_key:bytes):
+    def __init__(self, client_id:bytes, encrypted_aes_key:bytes):
         payload_size = constants.FieldsSizes.CLIENT_ID + len(encrypted_aes_key)
 
         self.header = ResponseHeader(constants.ResponseCodes.PublicKeyRecieved, payload_size)
@@ -69,9 +69,9 @@ class PublicKeyRecieved(Response):
         self.encrypted_aes_key = encrypted_aes_key
 
 class FileRecieved(Response):
-    client_id:str
+    client_id:bytes
     content_size:int
-    file_name:str
+    file_name:bytes
     checksum:int
 
     def pack_payload(self) -> bytes:
@@ -83,7 +83,7 @@ class FileRecieved(Response):
         # TODO: work on this
         return struct.pack("<16sI255sL", self.client_id, self.content_size, self.file_name, self.checksum)
 
-    def __init__(self, client_id:str, content_size:int, file_name:str, cksum:int):
+    def __init__(self, client_id:bytes, content_size:int, file_name:bytes, cksum:int):
         PAYLOAD_SIZE:int = constants.FieldsSizes.CLIENT_ID + constants.FieldsSizes.CONTENT_SIZE + constants.FieldsSizes.FILE_NAME + constants.FieldsSizes.CHECKSUM
 
         self.header = ResponseHeader(constants.ResponseCodes.FileRecieved, PAYLOAD_SIZE)
@@ -93,21 +93,21 @@ class FileRecieved(Response):
         self.checksum = cksum
 
 class MessageRecieved(Response):
-    client_id:str
+    client_id:bytes
 
     def pack_payload(self) -> bytes:
         # Small endian of:
         # client id
         return struct.pack(f"<{constants.FieldsSizes.CLIENT_ID}s", self.client_id)
 
-    def __init__(self, client_id:str):
+    def __init__(self, client_id:bytes):
         PAYLOAD_SIZE = constants.FieldsSizes.CLIENT_ID
 
         self.header = ResponseHeader(constants.ResponseCodes.MessageRecieved, PAYLOAD_SIZE)
         self.client_id = client_id
 
 class AllowRelogin(Response):
-    client_id:str
+    client_id:bytes
     encrypted_aes_key:bytes
 
     def pack_payload(self) -> bytes:
@@ -118,7 +118,7 @@ class AllowRelogin(Response):
         return struct.pack(f"<{constants.FieldsSizes.CLIENT_ID}s{len(self.encrypted_aes_key)}s", self.client_id,
             self.encrypted_aes_key)
 
-    def __init__(self, client_id: str, encrypted_aes_key:bytes):
+    def __init__(self, client_id:bytes, encrypted_aes_key:bytes):
         payload_size = constants.FieldsSizes.CLIENT_ID + len(encrypted_aes_key)
         self.header = ResponseHeader(constants.ResponseCodes.AllowRelogin, payload_size)
 
@@ -126,14 +126,14 @@ class AllowRelogin(Response):
         self.encrypted_aes_key = encrypted_aes_key
 
 class DeclineReLogin(Response):
-    client_id:str
+    client_id:bytes
 
     def pack_payload(self) -> bytes:
         # Small endian of:
             # client id
         return struct.pack(f"<{constants.FieldsSizes.CLIENT_ID}s", self.client_id)
 
-    def __init__(self, client_id:str):
+    def __init__(self, client_id:bytes):
         self.header = ResponseHeader(constants.ResponseCodes.DeclineRelogin, constants.FieldsSizes.CLIENT_ID)
         self.client_id = client_id
 

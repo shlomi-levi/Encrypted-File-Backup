@@ -2,6 +2,7 @@ import uuid
 import Requests
 import Responses
 import socket
+import os
 
 from User import User
 from constants import *
@@ -35,7 +36,7 @@ class Server:
                 RequestCodes.INVALIDCRCFOURTHTIME: self.handle_invalid_crc_fourth_time_request
             }
 
-            response = handler_dict[req.header.code](req, conn) # type:ignore
+            response = handler_dict[req.header.code](req) # type:ignore
 
             if response:
                 conn.sendall(response.pack())
@@ -46,7 +47,6 @@ class Server:
 
 
     def start(self):
-        # TODO: add support to multiple clients
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.bind(('localhost', self.PORT))
@@ -62,7 +62,7 @@ class Server:
             if sock:
                 sock.close()
 
-    def handle_registration_request(self, req:Requests.Registration, conn) -> Responses.Response:
+    def handle_registration_request(self, req:Requests.Registration) -> Responses.Response:
         user_uuid = uuid.uuid4().bytes
 
         while user_uuid in self.users_map:
@@ -74,7 +74,7 @@ class Server:
 
         return res
 
-    def handle_public_key_transfer_request(self, req:Requests.PublicKeyTransfer, conn) -> Responses.Response:
+    def handle_public_key_transfer_request(self, req:Requests.PublicKeyTransfer) -> Responses.Response:
         if req.header.client_id not in self.users_map:
             return Responses.GeneralServerError()
 
@@ -88,7 +88,7 @@ class Server:
 
         return Responses.PublicKeyRecieved(req.header.client_id, encrypted_aes_key)
 
-    def handle_relogin_request(self, req:Requests.Relogin, conn) -> Responses.Response:
+    def handle_relogin_request(self, req:Requests.Relogin) -> Responses.Response:
         cid = req.header.client_id
 
         if cid not in self.users_map or not self.users_map[cid].public_key:
@@ -100,13 +100,16 @@ class Server:
 
         return Responses.AllowRelogin(cid, encrypted_aes_key)
 
-    def handle_file_transfer_request(self, req:Requests.FileTransfer, conn) -> Responses.Response:
+    def handle_file_transfer_request(self, req:Requests.FileTransfer) -> Responses.Response:
         if req.header.client_id not in self.users_map:
             return Responses.GeneralServerError()
 
-        file_path = "my_product.docx"
-        # Todo: change this
-        # file_path = f"{req.header.client_id}/{basename(req.file_name)}"
+        directory = f"{req.header.client_id.hex()}"
+
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        file_path = f"{directory}\\{basename(req.file_name)}".rstrip('\x00')
 
         user = self.users_map[req.header.client_id]
         cipher = AES.new(user.aes_key, AES.MODE_CBC, iv=b'\x00' * 16)
@@ -120,12 +123,10 @@ class Server:
             decrypted_message:bytes = cipher.decrypt(req.message_content)[0:req.original_file_size]
             f.write(decrypted_message) # type: ignore
 
-            # TODO: REMEMBER TO CHECK IF I NEED TO CHANGE THIS:
             if req.packet_number >= req.total_packets:
                 f.close()
-                return Responses.FileRecieved(req.header.client_id, getsize(file_path), basename(req.file_name),
+                return Responses.FileRecieved(req.header.client_id, getsize(file_path), basename(req.file_name.encode()),
                 get_checksum(file_path))
-                # req = Requests.parse_request(conn)
 
         except:
             if f:
@@ -136,12 +137,12 @@ class Server:
 
         # return Responses.GeneralServerError() # TODO: CHECK IF i need this
 
-    def handle_valid_crc_reqeust(self, req:Requests.ValidCRC, conn) -> Responses.Response:
+    def handle_valid_crc_reqeust(self, req:Requests.ValidCRC) -> Responses.Response:
         return Responses.MessageRecieved(req.header.client_id)
 
-    def handle_invalid_crc_request(self, req:Requests.InvalidCRC, conn) -> Responses.Response:
+    def handle_invalid_crc_request(self, req:Requests.InvalidCRC) -> Responses.Response:
         # We don't need to do anything in this case.
         return None # type:ignore
 
-    def handle_invalid_crc_fourth_time_request(self, req:Requests.InvalidCRCFourthTime, conn) -> Responses.Response:
+    def handle_invalid_crc_fourth_time_request(self, req:Requests.InvalidCRCFourthTime) -> Responses.Response:
         return Responses.MessageRecieved(req.header.client_id)

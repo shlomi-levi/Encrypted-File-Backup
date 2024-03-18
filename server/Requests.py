@@ -4,12 +4,12 @@ import struct
 from constants import *
 
 class RequestHeader:
-    client_id: str
+    client_id: bytes
     version: int
     code: int
     payload_size: int
 
-    def __init__(self, clientid:str, version:int, code:int, payloadsize:int):
+    def __init__(self, clientid:bytes, version:int, code:int, payloadsize:int):
         self.client_id = clientid
         self.version = version
         self.code = code
@@ -81,7 +81,7 @@ class FileTransfer(Request):
 
         offset = FieldsSizes.FILE_NAME
 
-        file_name = struct.unpack(f"{FieldsSizes.FILE_NAME}s", payload[0:offset])[0]
+        file_name = struct.unpack(f"{FieldsSizes.FILE_NAME}s", payload[0:offset])[0].decode()
 
         payload = payload[offset:]
 
