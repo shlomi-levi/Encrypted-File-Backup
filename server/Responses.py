@@ -34,9 +34,7 @@ class RegisterationSuccess(Response):
     client_id:bytes
 
     def pack_payload(self) -> bytes:
-        # Small endian of:
-            # client id - 16 bytes
-        return struct.pack(f"<{constants.FieldsSizes.CLIENT_ID}s", self.client_id)
+        return struct.pack(f"{constants.FieldsSizes.CLIENT_ID}s", self.client_id)
 
     def __init__(self, client_id:bytes):
         PAYLOAD_SIZE = constants.FieldsSizes.CLIENT_ID
@@ -56,10 +54,7 @@ class PublicKeyRecieved(Response):
     encrypted_aes_key:bytes
 
     def pack_payload(self) -> bytes:
-        # Small endian of:
-            # client id
-            # encrypted_aes_key - dynamic size.
-        return struct.pack(f"<{constants.FieldsSizes.CLIENT_ID}s{len(self.encrypted_aes_key)}s", self.client_id, self.encrypted_aes_key)
+        return struct.pack(f"{constants.FieldsSizes.CLIENT_ID}s{len(self.encrypted_aes_key)}s", self.client_id, self.encrypted_aes_key)
 
     def __init__(self, client_id:bytes, encrypted_aes_key:bytes):
         payload_size = constants.FieldsSizes.CLIENT_ID + len(encrypted_aes_key)
@@ -111,11 +106,7 @@ class AllowRelogin(Response):
     encrypted_aes_key:bytes
 
     def pack_payload(self) -> bytes:
-        # Small endian of:
-            # client id
-            # encrypted aes key
-
-        return struct.pack(f"<{constants.FieldsSizes.CLIENT_ID}s{len(self.encrypted_aes_key)}s", self.client_id,
+        return struct.pack(f"{constants.FieldsSizes.CLIENT_ID}s{len(self.encrypted_aes_key)}s", self.client_id,
             self.encrypted_aes_key)
 
     def __init__(self, client_id:bytes, encrypted_aes_key:bytes):
@@ -129,9 +120,7 @@ class DeclineReLogin(Response):
     client_id:bytes
 
     def pack_payload(self) -> bytes:
-        # Small endian of:
-            # client id
-        return struct.pack(f"<{constants.FieldsSizes.CLIENT_ID}s", self.client_id)
+        return struct.pack(f"{constants.FieldsSizes.CLIENT_ID}s", self.client_id)
 
     def __init__(self, client_id:bytes):
         self.header = ResponseHeader(constants.ResponseCodes.DeclineRelogin, constants.FieldsSizes.CLIENT_ID)

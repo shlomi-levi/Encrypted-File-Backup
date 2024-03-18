@@ -3,6 +3,12 @@ SERVER_VERSION = 3
 PORT_INFO_FILE = 'port.info'
 DEFAULT_PORT = 1256
 
+class Database:
+    NAME = 'defensive.db'
+    CLIENTS_TABLE_NAME = 'clients'
+    FILES_TABLE_NAME = 'files'
+
+
 class FieldsSizes:
     AES_KEY = 32
     HEADER = 23

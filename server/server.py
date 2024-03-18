@@ -45,7 +45,6 @@ class Server:
                 conn.close()
                 break
 
-
     def start(self):
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:

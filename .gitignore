@@ -11,3 +11,5 @@ client/x64
 client/*.bak
 client/*.docx
 client/*.info
+*.docx
+*.db

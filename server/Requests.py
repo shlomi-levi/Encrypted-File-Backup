@@ -85,8 +85,6 @@ class FileTransfer(Request):
 
         payload = payload[offset:]
 
-        # Todo: check this
-        #  message_content = struct.unpack("<", payload)[0]
         message_content = payload
 
         return FileTransfer(header, content_size, original_size, packet_number, total_packets, file_name, message_content)
