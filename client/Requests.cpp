@@ -30,18 +30,15 @@ std::vector<uint8_t> RequestHeader::pack() {
 	for(int i = 0 ; i < Constants::Sizes_In_Bytes::CLIENT_ID ; i++)
 		result.push_back(client_id[i]);
 
-	uint16_t _code = code;
-	uint32_t _payload_size = payload_size;
-
 	result.push_back(version);
 
 	// Send it in little endian
 
-	for(int i = sizeof(_code) ; i >= 1 ; i-- )
-		result.push_back(Hex::get_byte(_code, i));
+	for(int i = sizeof(code) ; i >= 1 ; i-- )
+		result.push_back(Hex::get_byte(code, i));
 
-	for(int i = sizeof(_payload_size); i >= 1 ; i--)
-		result.push_back(Hex::get_byte(_payload_size, i));
+	for(int i = sizeof(payload_size); i >= 1 ; i--)
+		result.push_back(Hex::get_byte(payload_size, i));
 
 	return result;
 }

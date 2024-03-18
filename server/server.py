@@ -1,14 +1,16 @@
-from User import User
 import uuid
 import Requests
 import Responses
 import socket
+
+from User import User
 from constants import *
 from os.path import basename, getsize
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 from checksum import get_checksum
+from threading import Thread
 
 # TODO: GO OVER ALL HANDLERS AGAIN TO SEE I DIDNT MISS SOMETHING.
 
@@ -49,8 +51,11 @@ class Server:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.bind(('localhost', self.PORT))
                 sock.listen()
-                conn, addr = sock.accept()
-                self.wait_for_requests(conn)
+
+                while True:
+                    conn, addr = sock.accept()
+                    t = Thread(target=self.wait_for_requests, args=(conn,))
+                    t.run()
 
         except Exception as e:
             print(e)
