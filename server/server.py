@@ -163,7 +163,11 @@ def initialize_users_dictionary():
     for client in clients:
         users_map[client.user_id] = client
 
+    print(f"Loaded {len(clients)} users from database")
+
 def start_server(PORT:int):
+    print("Loading users from database")
+
     db.start()
 
     initialize_users_dictionary()
