@@ -1,12 +1,10 @@
-import uuid
-
 class User:
     name:str
-    UUID:uuid
+    user_id:bytes
     public_key:bytes
     AES_key:bytes
 
-    def __init__(self, name, user_id, public_key, AES_key):
+    def __init__(self, name:str, user_id:bytes, public_key:bytes, AES_key:bytes):
         self.name = name
         self.user_id = user_id
         self.public_key = public_key

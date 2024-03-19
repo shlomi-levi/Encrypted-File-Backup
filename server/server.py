@@ -18,13 +18,19 @@ from threading import Thread
 
 users_map:dict[uuid, User] = {}
 
+def get_file_directory(client_id):
+    return f"{client_id.hex()}"
+
+def get_file_path(user_id:bytes, file_name:str) -> str:
+    return get_file_directory(user_id) + "\\" + basename(file_name)
+
 def handle_registration_request(req:Requests.Registration) -> Responses.Response:
     user_uuid = uuid.uuid4().bytes
 
     while user_uuid in users_map:
         user_uuid = uuid.uuid4().bytes.decode()
 
-    users_map[user_uuid] = User(req.name, user_uuid, None, None)
+    users_map[user_uuid] = User(req.name, user_uuid, b'', b'')
 
     res = Responses.RegisterationSuccess(user_uuid)
 
@@ -38,9 +44,11 @@ def handle_public_key_transfer_request(req:Requests.PublicKeyTransfer) -> Respon
     u.public_key = req.public_key
 
     aes_key = get_random_bytes(FieldsSizes.AES_KEY)
-    u.aes_key = aes_key
+    u.AES_key = aes_key
 
     encrypted_aes_key:bytes = PKCS1_OAEP.new(RSA.importKey(req.public_key)).encrypt(aes_key)
+
+    db.create_client(u)
 
     return Responses.PublicKeyRecieved(req.header.client_id, encrypted_aes_key)
 
@@ -52,7 +60,7 @@ def handle_relogin_request(req:Requests.Relogin) -> Responses.Response:
 
     user = users_map[cid]
     rsa_encrypter = PKCS1_OAEP.new(RSA.importKey(user.public_key))
-    encrypted_aes_key: bytes = rsa_encrypter.encrypt(user.aes_key)
+    encrypted_aes_key: bytes = rsa_encrypter.encrypt(user.AES_key)
 
     return Responses.AllowRelogin(cid, encrypted_aes_key)
 
@@ -60,15 +68,15 @@ def handle_file_transfer_request(req:Requests.FileTransfer) -> Responses.Respons
     if req.header.client_id not in users_map:
         return Responses.GeneralServerError()
 
-    directory = f"{req.header.client_id.hex()}"
+    directory = get_file_directory(req.header.client_id)
 
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-    file_path = f"{directory}\\{basename(req.file_name)}".rstrip('\x00')
+    file_path = get_file_path(req.header.client_id, req.file_name)
 
     user = users_map[req.header.client_id]
-    cipher = AES.new(user.aes_key, AES.MODE_CBC, iv=b'\x00' * 16)
+    cipher = AES.new(user.AES_key, AES.MODE_CBC, iv=b'\x00' * 16)
 
     f = None
 
@@ -95,13 +103,14 @@ def handle_file_transfer_request(req:Requests.FileTransfer) -> Responses.Respons
     # return Responses.GeneralServerError() # TODO: CHECK IF i need this
 
 def handle_valid_crc_reqeust(req:Requests.ValidCRC) -> Responses.Response:
+    db.add_file(req.header.client_id, req.file_name, get_file_path(req.header.client_id, req.file_name), True)
     return Responses.MessageRecieved(req.header.client_id)
 
 def handle_invalid_crc_request(req:Requests.InvalidCRC) -> Responses.Response:
-    # We don't need to do anything in this case.
     return None # type:ignore
 
 def handle_invalid_crc_fourth_time_request(req:Requests.InvalidCRCFourthTime) -> Responses.Response:
+    db.add_file(req.header.client_id, req.file_name, get_file_path(req.header.client_id, req.file_name), False)
     return Responses.MessageRecieved(req.header.client_id)
 
 def wait_for_requests(conn):
@@ -131,10 +140,9 @@ def initialize_users_dictionary():
     clients = db.get_all_clients()
 
     for client in clients:
-        pass
+        users_map[client.user_id] = client
 
 def start_server(PORT:int):
-    # Todo: add check db
     db.start()
 
     initialize_users_dictionary()
@@ -144,6 +152,8 @@ def start_server(PORT:int):
             sock.bind(('localhost', PORT))
             sock.listen()
 
+            print("Server has started on port " + str(PORT))
+            
             while True:
                 conn, addr = sock.accept()
                 t = Thread(target=wait_for_requests, args=(conn,))

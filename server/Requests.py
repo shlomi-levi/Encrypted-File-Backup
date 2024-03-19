@@ -81,7 +81,7 @@ class FileTransfer(Request):
 
         offset = FieldsSizes.FILE_NAME
 
-        file_name = struct.unpack(f"{FieldsSizes.FILE_NAME}s", payload[0:offset])[0].decode()
+        file_name = struct.unpack(f"{FieldsSizes.FILE_NAME}s", payload[0:offset])[0].decode().rstrip('\x00')
 
         payload = payload[offset:]
 
@@ -103,7 +103,7 @@ class ValidCRC(Request):
 
     @staticmethod
     def create_request_from_payload(header:RequestHeader, payload:bytes) -> Request:
-        file_name = struct.unpack(f"{FieldsSizes.FILE_NAME}s", payload)[0]
+        file_name = struct.unpack(f"{FieldsSizes.FILE_NAME}s", payload)[0].decode().rstrip('\x00')
 
         return ValidCRC(header, file_name)
     def __init__(self, header:RequestHeader, file_name):
@@ -115,7 +115,7 @@ class InvalidCRC(Request):
 
     @staticmethod
     def create_request_from_payload(header:RequestHeader, payload:bytes) -> Request:
-        file_name = struct.unpack(f"{FieldsSizes.FILE_NAME}s", payload)[0]
+        file_name = struct.unpack(f"{FieldsSizes.FILE_NAME}s", payload)[0].decode().rstrip('\x00')
 
         return ValidCRC(header, file_name)
 

@@ -109,12 +109,43 @@ def create_client(u:User) -> None:
         die()
         exit()
 
-def get_all_clients() -> list:
-    cursor.execute(f"SELECT * FROM {Database.CLIENTS_TABLE_NAME}")
-    return cursor.fetchall()
+def add_file(client_id:bytes, file_name:str, file_path:str, verified:bool) -> None:
+    _verified = 1 if verified else 0
+
+    try:
+        query = f"""SELECT * FROM {Database.FILES_TABLE_NAME} WHERE ID=? AND "File Name"=?"""
+        cursor.execute(query, (client_id, file_name))
+
+        if cursor.fetchall():
+            query = f"""DELETE FROM {Database.FILES_TABLE_NAME} WHERE ID=? AND "File Name"=?"""
+            sql_conn.execute(query, (client_id, file_name))
+            sql_conn.commit()
+
+        query = f"""INSERT INTO {Database.FILES_TABLE_NAME} (ID, "File Name", "Path Name", Verified)
+                VALUES (?, ?, ?, ?)"""
+
+        sql_conn.execute(query, (client_id, file_name, file_path, _verified))
+        sql_conn.commit()
+
+    except Exception as e:
+        print(e)
+        sql_conn.close()
+        exit()
+
+def get_all_clients() -> list[User]:
+    ret = []
+
+    query = f"""SELECT Name, "ID", "PublicKey", "AES Key" FROM {Database.CLIENTS_TABLE_NAME}"""
+    cursor.execute(query)
+    users = cursor.fetchall()
+
+    for u in users:
+        ret.append(User(u[0], u[1], u[2], u[3]))
+
+    return ret
 
 def update_last_seen(u:User) -> None:
-    if not client_exists(u.UUID):
+    if not client_exists(u.user_id):
         return create_client(u)
 
     try:
