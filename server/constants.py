@@ -8,7 +8,6 @@ class Database:
     CLIENTS_TABLE_NAME = 'clients'
     FILES_TABLE_NAME = 'files'
 
-
 class FieldsSizes:
     AES_KEY = 32
     HEADER = 23

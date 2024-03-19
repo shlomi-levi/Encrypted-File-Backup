@@ -14,8 +14,6 @@ from Crypto.Random import get_random_bytes
 from checksum import get_checksum
 from threading import Thread
 
-# TODO: GO OVER ALL HANDLERS AGAIN TO SEE I DIDNT MISS SOMETHING.
-
 users_map:dict[uuid, User] = {}
 
 def get_file_directory(client_id):
@@ -34,6 +32,8 @@ def handle_registration_request(req:Requests.Registration) -> Responses.Response
 
     res = Responses.RegisterationSuccess(user_uuid)
 
+    print(f"The client {req.name} (UUID: {user_uuid.hex()}) has registered successfully.")
+
     return res
 
 def handle_public_key_transfer_request(req:Requests.PublicKeyTransfer) -> Responses.Response:
@@ -50,17 +50,28 @@ def handle_public_key_transfer_request(req:Requests.PublicKeyTransfer) -> Respon
 
     db.create_client(u)
 
+    print(f"Public key recieved from {u.name} ({u.user_id.hex()}) and an encrypted AES key was sent back.")
+
     return Responses.PublicKeyRecieved(req.header.client_id, encrypted_aes_key)
 
 def handle_relogin_request(req:Requests.Relogin) -> Responses.Response:
     cid = req.header.client_id
+    _cid_hex = cid.hex()
 
     if cid not in users_map or not users_map[cid].public_key:
+        print(f"Relogin declined for {req.client_name} since the server doesn't recognize this uuid ({_cid_hex})")
         return Responses.DeclineReLogin(cid)
 
     user = users_map[cid]
+
+    if req.client_name != user.name:
+        print(f"Relogin failed for the user (UUID: {_cid_hex}) because the name he provided wasn't the correct name")
+        return Responses.DeclineReLogin(cid)
+
     rsa_encrypter = PKCS1_OAEP.new(RSA.importKey(user.public_key))
     encrypted_aes_key: bytes = rsa_encrypter.encrypt(user.AES_key)
+
+    print(f"Successfuly relogin for the client {req.client_name} (UUID: {_cid_hex})")
 
     return Responses.AllowRelogin(cid, encrypted_aes_key)
 
@@ -97,12 +108,14 @@ def handle_file_transfer_request(req:Requests.FileTransfer) -> Responses.Respons
         if f:
             f.close()
 
+        return Responses.GeneralServerError()
+
     if f:
         f.close()
 
-    # return Responses.GeneralServerError() # TODO: CHECK IF i need this
-
 def handle_valid_crc_reqeust(req:Requests.ValidCRC) -> Responses.Response:
+    cname = users_map[req.header.client_id].name
+    print(f"A file was recieved from the client {cname} (UUID: {req.header.client_id.hex()}) and was verified successfully")
     db.add_file(req.header.client_id, req.file_name, get_file_path(req.header.client_id, req.file_name), True)
     return Responses.MessageRecieved(req.header.client_id)
 
@@ -110,12 +123,18 @@ def handle_invalid_crc_request(req:Requests.InvalidCRC) -> Responses.Response:
     return None # type:ignore
 
 def handle_invalid_crc_fourth_time_request(req:Requests.InvalidCRCFourthTime) -> Responses.Response:
+    cname = users_map[req.header.client_id].name
+    print(f"A file was recieved from the client {cname} (UUID: {req.header.client_id.hex()}) , but the verification failed")
     db.add_file(req.header.client_id, req.file_name, get_file_path(req.header.client_id, req.file_name), False)
     return Responses.MessageRecieved(req.header.client_id)
 
 def wait_for_requests(conn):
     while True:
         req:Requests.Request = Requests.parse_request(conn)
+
+        if not req:
+            conn.sendall(Responses.GeneralServerError().pack())
+            continue
 
         handler_dict = {
             RequestCodes.REGISTRATION : handle_registration_request,
@@ -156,6 +175,7 @@ def start_server(PORT:int):
             
             while True:
                 conn, addr = sock.accept()
+                print("Server has accepted a connection")
                 t = Thread(target=wait_for_requests, args=(conn,))
                 t.run()
 

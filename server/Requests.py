@@ -28,8 +28,7 @@ class Registration(Request):
 
     @staticmethod
     def create_request_from_payload(header:RequestHeader, payload:bytes) -> Request:
-        client_name = struct.unpack(f"{FieldsSizes.CLIENT_NAME}s", payload)[0]
-
+        client_name = struct.unpack(f"{FieldsSizes.CLIENT_NAME}s", payload)[0].decode().rstrip('\x00')
         return Registration(header, client_name)
 
     def __init__(self, header:RequestHeader, client_name):
@@ -37,12 +36,13 @@ class Registration(Request):
         self.name = client_name
 
 class PublicKeyTransfer(Request):
-    name:str
+    client_name:str
     public_key:str
 
     @staticmethod
     def create_request_from_payload(header:RequestHeader, payload:bytes) -> Request:
         client_name, public_key = struct.unpack(f"{FieldsSizes.CLIENT_NAME}s{FieldsSizes.PUBLIC_KEY}s", payload)
+        client_name = client_name.decode().rstrip('\x00')
         return PublicKeyTransfer(header, client_name, public_key)
 
     def __init__(self, header:RequestHeader, client_name, public_key):
@@ -51,11 +51,11 @@ class PublicKeyTransfer(Request):
         self.public_key = public_key
 
 class Relogin(Request):
-    name:str
+    client_name:str
 
     @staticmethod
     def create_request_from_payload(header:RequestHeader, payload:bytes) -> Request:
-        client_name = struct.unpack(f"{FieldsSizes.CLIENT_NAME}s", payload)[0]
+        client_name = struct.unpack(f"{FieldsSizes.CLIENT_NAME}s", payload)[0].decode().rstrip('\x00')
 
         return Relogin(header, client_name)
 
@@ -136,7 +136,7 @@ class InvalidCRCFourthTime(Request):
         self.header = header
         self.file_name = file_name
 
-def parse_request(conn) -> Request:
+def parse_request(conn) -> Request | None:
     Request_Codes_To_Handlers = {
         RequestCodes.REGISTRATION: Registration.create_request_from_payload,
         RequestCodes.PUBLIC_KEY_TRANSFER: PublicKeyTransfer.create_request_from_payload,
@@ -152,11 +152,9 @@ def parse_request(conn) -> Request:
 
         client_id, version, code, payload_size = struct.unpack(f"<{FieldsSizes.CLIENT_ID}sBHL", request_bytes)
 
-        # if code not in Request_Codes_To_Handlers:
-        # TODO: output error, invalid code
-
-        # if payload_size != desired_payload_size:
-        # TODO: output error, invalid payload size
+        if code not in Request_Codes_To_Handlers:
+            print("Invalid request code provided")
+            return None
 
         header = RequestHeader(client_id, version, code, payload_size)
 
@@ -167,7 +165,3 @@ def parse_request(conn) -> Request:
     except Exception as e:
         print(e)
         return None # type: ignore
-
-
-
-

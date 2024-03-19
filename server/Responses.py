@@ -70,13 +70,8 @@ class FileRecieved(Response):
     checksum:int
 
     def pack_payload(self) -> bytes:
-        # Small endian of
-            # client id - 16 bytes
-            # content size - 4 bytes
-            # file name - 255 bytes
-            # cksum - 4 bytes
-        # TODO: work on this
-        return struct.pack("<16sI255sL", self.client_id, self.content_size, self.file_name, self.checksum)
+        fmt = f"<{constants.FieldsSizes.CLIENT_ID}s" + "I" + f"{constants.FieldsSizes.FILE_NAME}s" + "L"
+        return struct.pack(fmt, self.client_id, self.content_size, self.file_name, self.checksum)
 
     def __init__(self, client_id:bytes, content_size:int, file_name:bytes, cksum:int):
         PAYLOAD_SIZE:int = constants.FieldsSizes.CLIENT_ID + constants.FieldsSizes.CONTENT_SIZE + constants.FieldsSizes.FILE_NAME + constants.FieldsSizes.CHECKSUM

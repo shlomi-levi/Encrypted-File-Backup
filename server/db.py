@@ -69,27 +69,27 @@ def client_exists(uuid:bytes) -> bool:
         die()
         exit()
 
-def __get_key(uuid:bytes, ktype:KeyType) -> bytes:
-    if not client_exists(uuid):
-        raise Exception("Client doesnt exist in " + Database.CLIENTS_TABLE_NAME + " table.")
-
-    if ktype == KeyType.PublicKey:
-        query = f"""SELECT PublicKey from {Database.CLIENTS_TABLE_NAME} WHERE ID=?"""
-        cursor.execute(query, (uuid,))
-
-    elif ktype == KeyType.AESKey:
-        query = f"""SELECT 'AES Key' from {Database.CLIENTS_TABLE_NAME} WHERE ID=?"""
-        cursor.execute(query, (uuid,))
-
-    res = cursor.fetchall()
-
-    return res[0]
-
-def get_public_key(uuid:bytes) -> bytes:
-    return __get_key(uuid, KeyType.PublicKey)
-
-def get_aes_key(uuid:bytes) -> bytes:
-    return __get_key(uuid, KeyType.AESKey)
+# def __get_key(uuid:bytes, ktype:KeyType) -> bytes:
+#     if not client_exists(uuid):
+#         raise Exception("Client doesn't exist in " + Database.CLIENTS_TABLE_NAME + " table.")
+#
+#     if ktype == KeyType.PublicKey:
+#         query = f"""SELECT PublicKey from {Database.CLIENTS_TABLE_NAME} WHERE ID=?"""
+#         cursor.execute(query, (uuid,))
+#
+#     elif ktype == KeyType.AESKey:
+#         query = f"""SELECT 'AES Key' from {Database.CLIENTS_TABLE_NAME} WHERE ID=?"""
+#         cursor.execute(query, (uuid,))
+#
+#     res = cursor.fetchall()
+#
+#     return res[0]
+#
+# def get_public_key(uuid:bytes) -> bytes:
+#     return __get_key(uuid, KeyType.PublicKey)
+#
+# def get_aes_key(uuid:bytes) -> bytes:
+#     return __get_key(uuid, KeyType.AESKey)
 
 def create_client(u:User) -> None:
     if client_exists(u.user_id):
@@ -140,7 +140,8 @@ def get_all_clients() -> list[User]:
     users = cursor.fetchall()
 
     for u in users:
-        ret.append(User(u[0], u[1], u[2], u[3]))
+        _name = u[0].decode()
+        ret.append(User(_name, u[1], u[2], u[3]))
 
     return ret
 
@@ -163,4 +164,3 @@ def die() -> None:
 
 def start() -> None:
     verify_tables_existence()
-
