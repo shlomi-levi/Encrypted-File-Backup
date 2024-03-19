@@ -1,36 +1,135 @@
 import sqlite3
+
+from datetime import datetime
 from constants import Database
+from User import User
+from enum import IntEnum
 
-conn = sqlite3.connect('defensive.db')
-conn.text_factory = bytes
+sql_conn = sqlite3.connect(Database.DATABASE_NAME)
 
-def verify_tables_existence():
-    cursor = conn.cursor()
+cursor = sql_conn.cursor()
+sql_conn.text_factory = bytes
 
+class KeyType(IntEnum):
+    PublicKey = 0
+    AESKey = 1
+
+def get_current_time_string() -> str:
+    return datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+def verify_tables_existence() -> None:
     try:
         cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{Database.CLIENTS_TABLE_NAME}'")
         res = cursor.fetchall()
 
         if not res:
-            conn.execute(f"""CREATE TABLE {Database.CLIENTS_TABLE_NAME}(ID VARCHAR(16) NOT NULL PRIMARY KEY, NAME VARCHAR(255), PublicKey VARCHAR(160), LastSeen TEXT, "AES" Key" VARCHAR(32)""")
+            query = f"""CREATE TABLE {Database.CLIENTS_TABLE_NAME} (
+                ID BLOB NOT NULL PRIMARY KEY, 
+                NAME VARCHAR(255), 
+                PublicKey BLOB, 
+                LastSeen TEXT, 
+                "AES Key" BLOB
+            )"""
+
+            sql_conn.execute(query)
 
         cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{Database.FILES_TABLE_NAME}'")
         res = cursor.fetchall()
 
         if not res:
-            conn.execute(f"""CREATE TABLE {Database.FILES_TABLE_NAME}(ID VARCHAR(16) NOT NULL PRIMARY KEY, "File Name" VARCHAR(255) PRIMARY KEY, "Path Name" VARCHAR(255), Verified INTEGER""")
+            query = f"""CREATE TABLE {Database.FILES_TABLE_NAME} (
+                ID BLOB NOT NULL, 
+                "File Name" VARCHAR(255), 
+                "Path Name" VARCHAR(255), 
+                Verified INTEGER,
+                PRIMARY KEY(ID, "File Name")
+            )"""
+
+            sql_conn.execute(query)
 
     except Exception as e:
         print(e)
         die()
-        exit(1)
+        exit()
 
-def die():
-    conn.close()
+def client_exists(uuid:bytes) -> bool:
+    try:
+        query = f"SELECT * from {Database.CLIENTS_TABLE_NAME} where ID=?"""
+        cursor.execute(query, (uuid,))
 
-def start():
+        res = cursor.fetchall()
+
+        if res:
+            return True
+
+        return False
+
+    except Exception as e:
+        print(e)
+        die()
+        exit()
+
+def __get_key(uuid:bytes, ktype:KeyType) -> bytes:
+    if not client_exists(uuid):
+        raise Exception("Client doesnt exist in " + Database.CLIENTS_TABLE_NAME + " table.")
+
+    if ktype == KeyType.PublicKey:
+        query = f"""SELECT PublicKey from {Database.CLIENTS_TABLE_NAME} WHERE ID=?"""
+        cursor.execute(query, (uuid,))
+
+    elif ktype == KeyType.AESKey:
+        query = f"""SELECT 'AES Key' from {Database.CLIENTS_TABLE_NAME} WHERE ID=?"""
+        cursor.execute(query, (uuid,))
+
+    res = cursor.fetchall()
+
+    return res[0]
+
+def get_public_key(uuid:bytes) -> bytes:
+    return __get_key(uuid, KeyType.PublicKey)
+
+def get_aes_key(uuid:bytes) -> bytes:
+    return __get_key(uuid, KeyType.AESKey)
+
+def create_client(u:User) -> None:
+    if client_exists(u.user_id):
+        return
+
+    try:
+        query = f"""
+                INSERT INTO {Database.CLIENTS_TABLE_NAME} (ID, 'Name', 'PublicKey', 'LastSeen', 'AES Key') 
+                Values (?, ?, ?, ?, ?)"""
+
+        sql_conn.execute(query, (u.user_id, u.name, u.public_key, get_current_time_string(), u.AES_key))
+
+        sql_conn.commit()
+
+    except Exception as e:
+        print(e)
+        die()
+        exit()
+
+def get_all_clients() -> list:
+    cursor.execute(f"SELECT * FROM {Database.CLIENTS_TABLE_NAME}")
+    return cursor.fetchall()
+
+def update_last_seen(u:User) -> None:
+    if not client_exists(u.UUID):
+        return create_client(u)
+
+    try:
+        query = f"UPDATE {Database.CLIENTS_TABLE_NAME} SET LastSeen=? WHERE ID=?"
+        sql_conn.execute(query, (get_current_time_string(), u.user_id))
+        sql_conn.commit()
+
+    except Exception as e:
+        print(e)
+        die()
+        exit()
+
+def die() -> None:
+    sql_conn.close()
+
+def start() -> None:
     verify_tables_existence()
-
-
-
 

@@ -1,4 +1,4 @@
-from server import Server
+from server import start_server
 import constants
 
 def main():
@@ -13,10 +13,7 @@ def main():
         print(f"{constants.PORT_INFO_FILE} file could not be opened")
         PORT = constants.DEFAULT_PORT
 
-    # todo: add check db
-    s = Server(PORT)
-    s.start()
-
+    start_server(PORT)
 
 if __name__ == "__main__":
     main()

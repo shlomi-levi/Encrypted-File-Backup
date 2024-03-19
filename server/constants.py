@@ -4,7 +4,7 @@ PORT_INFO_FILE = 'port.info'
 DEFAULT_PORT = 1256
 
 class Database:
-    NAME = 'defensive.db'
+    DATABASE_NAME = 'defensive.db'
     CLIENTS_TABLE_NAME = 'clients'
     FILES_TABLE_NAME = 'files'
 
