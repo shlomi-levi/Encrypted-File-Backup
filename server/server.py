@@ -73,6 +73,8 @@ def handle_relogin_request(req:Requests.Relogin) -> Responses.Response:
 
     print(f"Successfuly relogin for the client {req.client_name} (UUID: {_cid_hex})")
 
+    db.update_last_seen(user)
+
     return Responses.AllowRelogin(cid, encrypted_aes_key)
 
 def handle_file_transfer_request(req:Requests.FileTransfer) -> Responses.Response:
