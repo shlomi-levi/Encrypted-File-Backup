@@ -5,11 +5,14 @@
 #include <vector>
 #include <sstream>
 #include <exception>
+
 #include "Utilities.h"
 #include "Base64Wrapper.h"
+#include "User.h"
 
 using std::string;
 using std::cout;
+using std::cerr;
 using std::endl;
 using boost::algorithm::hex;
 
@@ -121,20 +124,22 @@ void read_me_file(client_info& result) {
 		f.open(Constants::ME_FILE_PATH, std::ios::in);
 
 		if(!f.is_open()) {
-			cout << "The file " << Constants::ME_FILE_PATH << " exists, but the system could not open it." << endl;
+			cerr << "The file " << Constants::ME_FILE_PATH << " exists, but the system could not open it." << endl;
 			exit(1);
 		}
 
-		string* variables[] = {&result.client_name, &result.UUID, &result.private_key_base64};
+		std::getline(f, result.client_name);
+		std::getline(f, result.UUID);
 
-		for(string* var : variables) {
-			if(!std::getline(f, line)) {
-				cout << Constants::ME_FILE_PATH << " is not according to format." << endl;
-				exit(1);
-			}
+		result.private_key_base64 = "";
 
-			(*var) = line;
-		}
+		string temp = "";
+
+		while(std::getline(f, temp))
+			result.private_key_base64 += temp + "\n";
+
+		/* Remove the last new line */
+		result.private_key_base64 = result.private_key_base64.substr(0, result.private_key_base64.size() - 1);
 
 		f.close();
 	}
@@ -143,7 +148,7 @@ void read_me_file(client_info& result) {
 		if(f.is_open())
 			f.close();
 
-		cout << e.what();
+		cerr << e.what();
 		exit(1);
 	}
 }
@@ -159,11 +164,9 @@ void read_priv_key_file(client_info& result) {
 			exit(1);
 		}
 
-
-		if(!std::getline(f, result.private_key)) {
-			throw std::logic_error(Constants::PRIV_KEY_PATH + " is not according to format.");
-			exit(1);
-		}
+		std::stringstream buffer;
+		buffer << f.rdbuf();
+		result.private_key_priv_key_file = buffer.str();
 
 		f.close();
 	}
@@ -172,7 +175,79 @@ void read_priv_key_file(client_info& result) {
 		if(f.is_open())
 			f.close();
 
-		cout << e.what();
+		cerr << e.what();
+		exit(1);
+	}
+}
+
+void create_client_files(const User& u) {
+	if(std::filesystem::exists(Constants::ME_FILE_PATH) && std::filesystem::exists(Constants::PRIV_KEY_PATH))
+		return;
+
+	if(std::filesystem::exists(Constants::ME_FILE_PATH))
+		std::filesystem::remove(Constants::ME_FILE_PATH);
+
+	else if(std::filesystem::exists(Constants::PRIV_KEY_PATH))
+		std::filesystem::remove(Constants::PRIV_KEY_PATH);
+
+	std::ofstream f;
+	string server_details;
+
+	try {
+		f.open(Constants::ME_FILE_PATH, std::ios::out);
+
+		if(!f.is_open()) {
+			throw std::logic_error("Couldn't create the file " + Constants::ME_FILE_PATH);
+			exit(1);
+		}
+
+		f.write(u.name, strlen(u.name));
+		f << "\n";
+		
+		f << Hex::bytes_to_hex_string(u.uuid, Constants::Sizes_In_Bytes::CLIENT_ID);
+		f << "\n";
+		
+		string private_key = u.rsa_object->getPrivateKey();
+		string base64_encoded_private_key = Base64Wrapper::encode(private_key);
+		f << base64_encoded_private_key;
+
+		f.close();
+
+		cout << "me.info file created" << endl;
+	}
+
+	catch(const std::exception& e) {
+		cerr << e.what() << endl;
+		
+		if(f.is_open())
+			f.close();
+
+		exit(1);
+	}
+
+	try {
+		f.open(Constants::PRIV_KEY_PATH, std::ios::out);
+
+		if(!f.is_open()) {
+			throw std::logic_error("Couldn't create the file " + Constants::PRIV_KEY_PATH);
+			exit(1);
+		}
+
+		string private_key = u.rsa_object->getPrivateKey();
+		string base64_encoded_private_key = Base64Wrapper::encode(private_key);
+		f << base64_encoded_private_key;
+
+		f.close();
+		
+		cout << "priv.key file created" << endl;
+	}
+	
+	catch(const std::exception& e) {
+		cerr << e.what() << endl;
+
+		if(f.is_open())
+			f.close();
+
 		exit(1);
 	}
 }
@@ -182,7 +257,8 @@ client_info get_client_info() {
 	
 	result.UUID = "";
 	result.private_key_base64 = "";
-	result.private_key = "";
+	result.private_key_priv_key_file = "";
+	result.decoded_private_key = "";
 	
 	read_transfer_file(result);
 
@@ -203,8 +279,10 @@ client_info get_client_info() {
 
 	read_priv_key_file(result);
 
-	if(result.private_key != Base64Wrapper::decode(result.private_key_base64))
+	if(Base64Wrapper::decode(result.private_key_priv_key_file) != Base64Wrapper::decode(result.private_key_base64))
 		throw std::logic_error("Private key in " + Constants::PRIV_KEY_PATH + " is different than the one in " + Constants::ME_FILE_PATH);
+
+	result.decoded_private_key = Base64Wrapper::decode(result.private_key_base64);
 	
 	return result;
 }

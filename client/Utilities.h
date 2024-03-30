@@ -9,6 +9,10 @@
 
 using std::string;
 
+class User;
+
+void create_client_files(const User& u);
+
 namespace Hex {
 	string bytes_to_hex_string(const char* bytes, size_t length = Constants::Sizes_In_Bytes::CLIENT_ID);
 	
@@ -60,7 +64,8 @@ struct client_info {
 	string file_path;
 	string UUID;
 	string private_key_base64;
-	string private_key;
+	string private_key_priv_key_file;
+	string decoded_private_key;
 };
 
 client_info get_client_info();

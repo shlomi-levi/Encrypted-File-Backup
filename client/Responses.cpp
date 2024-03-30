@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "Responses.h"
 #include "Utilities.h"
 #include "User.h"
@@ -148,8 +150,9 @@ std::unique_ptr<Response> Response::get_response(tcp::socket& s, User* u) {
 			break;
 
 		default:
-			std::cout << "ERROR";
-			// Todo: throw error, and remove previous line.
+			std::cerr << "Invalid response code recieved from server. Exiting" << std::endl;
+			s.close();
+			exit(1);
 	}
 
 	res->header = header;

@@ -11,22 +11,19 @@
 #include "Base64Wrapper.h"
 #include "checksum.h"
 
-// TODO: Add saving of user details in a file
-
-using std::cerr;
 using std::cout;
+using std::cerr;
 using std::endl;
-using std::cbegin;
-using std::cend;
 
-User::User(string server_address, string server_port, string user_name, string file_path, string user_uuid, string private_key) : aes_object(nullptr) {
+User::User(string server_address, string server_port, string user_name, string file_path, string user_uuid, string private_key) {
 	has_uuid = false;
 
 	if(user_name.length() > (Constants::Sizes_In_Bytes::CLIENT_NAME - 1)) // -1 for \0 character
 		throw std::logic_error("User name is too long. it must be at most " + std::to_string(Constants::Sizes_In_Bytes::CLIENT_NAME - 1) + " characters.");
 
+	std::fill_n(this->name, Constants::Sizes_In_Bytes::CLIENT_NAME, '\0');
+
 	user_name.copy(this->name, user_name.length());
-	this->name[user_name.length()] = '\0';
 
 	this->file_path = file_path;
 	this->server_address = server_address;
@@ -76,19 +73,26 @@ void User::get_file_name() {
 }
 
 void User::handle_relogin(tcp::socket& s) {
+	cout << "Relogin initiated." << endl;
+
 	Relogin relogin_req {*this};
 	boost::asio::write(s, boost::asio::buffer(relogin_req.pack()));
 
 	std::unique_ptr<Response> res = Response::get_response(s);
 
-	if(res->header.code == Constants::Responses::codes::DeclineRelogin)
+	if(res->header.code == Constants::Responses::codes::DeclineRelogin) {
+		cout << "Relogin failed. Registering instead." << endl;
 		return handle_registration(s);
+	}
 
 	if(res->header.code == Constants::Responses::codes::GeneralServerError) {
-		// Todo: decide what to do in case of server error.
+		cerr << "Server has responded with a GeneralServerError response. exiting";
+		s.close();
+		exit(1);
 	}
 
 	if(res->header.code == Constants::Responses::codes::AllowRelogin) {
+		cout << "Relogin succeeded." << endl;
 		AllowRelogin* relogin_response = static_cast<AllowRelogin*>(res.get());
 
 		string decrypted_aes_key = rsa_object->decrypt(relogin_response->encrypted_aes_key);
@@ -104,6 +108,8 @@ void User::handle_relogin(tcp::socket& s) {
 
 		aes_object = std::make_unique<AESWrapper>(key, Constants::Sizes_In_Bytes::AES_KEY);
 
+		cout << "Successfully decrypted the AES key the server sent." << endl;
+
 		std::copy(relogin_response->client_id, relogin_response->client_id + Constants::Sizes_In_Bytes::CLIENT_ID, uuid);
 
 		return;
@@ -111,12 +117,16 @@ void User::handle_relogin(tcp::socket& s) {
 }
 
 void User::handle_public_key_transfer(tcp::socket& s) {
+	cout << "Transferring public key to server" << endl;
+
 	PublicKeyTransfer public_key_transfer_req {*this};
 	boost::asio::write(s, boost::asio::buffer(public_key_transfer_req.pack()));
 
 	unique_ptr<Response> res = Response::get_response(s);
 
 	if(res->header.code == Constants::Responses::codes::PublicKeyRecieved) {
+		cout << "Server recieved public key, and sent an encrypted AES key" << endl;
+
 		PublicKeyRecieved* pkr = static_cast<PublicKeyRecieved*>(res.get());
 
 		string decrypted_aes_key = rsa_object->decrypt(pkr->encrypted_aes_key);
@@ -132,17 +142,23 @@ void User::handle_public_key_transfer(tcp::socket& s) {
 
 		aes_object = std::make_unique<AESWrapper>(key, Constants::Sizes_In_Bytes::AES_KEY);
 
+		cout << "Successfully decrypted the AES key the server sent." << endl;
+
 		std::copy(pkr->client_id, pkr->client_id + Constants::Sizes_In_Bytes::CLIENT_ID, uuid);
 
 		return;
 	}
 
 	else if(res->header.code == Constants::Responses::codes::GeneralServerError) {
-		// Todo: throw error.
+		cerr << "Server has responded with a GeneralServerError response. exiting";
+		s.close();
+		exit(1);
 	}
 }
 
 void User::handle_registration(tcp::socket& s) {
+	cout << "Registration initiated." << endl;
+
 	Registration registration_req {*this};
 
 	std::vector<uint8_t> packed = registration_req.pack();
@@ -152,16 +168,20 @@ void User::handle_registration(tcp::socket& s) {
 	unique_ptr<Response> res = Response::get_response(s);
 
 	if(res->header.code == Constants::Responses::codes::GeneralServerError) {
-		// Todo: decide what to do in case of Server Error.
-		return;
+		cerr << "Server has responded with a GeneralServerError response. exiting";
+		s.close();
+		exit(1);
 	}
 
 	if(res->header.code == Constants::Responses::codes::RegistrationFailure) {
-		// Todo: decide what to do in case of registration failure
-		return;
+		cerr << "Server has responded with a GeneralServerError response. exiting";
+		s.close();
+		exit(1);
 	}
 
 	if(res->header.code == Constants::Responses::codes::RegistrationSuccess) {
+		cout << "Registration succeeded." << endl;
+
 		RegistrationSuccess* reg_success = static_cast<RegistrationSuccess*>(res.get());
 		std::copy(reg_success->client_id, reg_success->client_id + Constants::Sizes_In_Bytes::CLIENT_ID, uuid);
 		
@@ -220,6 +240,8 @@ void User::handle_file_transfer(tcp::socket& s) {
 }
 
 void User::start() {
+	cout << "Client started" << endl;
+
 	boost::asio::io_context io_context;
 	tcp::socket s(io_context);
 	tcp::resolver resolver(io_context);
@@ -227,16 +249,19 @@ void User::start() {
 	try {
 		boost::asio::connect(s, resolver.resolve(server_address, server_port));
 
+		cout << "Client has connected to the server" << endl;
+
 		if(has_uuid)
 			handle_relogin(s);
 
 		else
 			handle_registration(s);
 
-		cout << "Client is now logged in, and keys were transferred" << endl;
+		// Now the client is logged in and has a key.
+		create_client_files(*this);
+
 		cout << "Transferring file:" << endl;
 
-		// Now the client is logged in and has a key.
 		unsigned long checksum_result = calculate_crc(file_name);
 
 		int failed_transfers_counter = 0;
@@ -247,7 +272,9 @@ void User::start() {
 			std::unique_ptr<Response> res = Response::get_response(s);
 
 			if(res->header.code == Constants::Responses::codes::GeneralServerError) {
-				// Todo: decide how to handle this error.
+				cerr << "Server has responded with a GeneralServerError response. exiting";
+				s.close();
+				exit(1);
 			}
 
 			if(res->header.code == Constants::Responses::codes::FileRecieved) {
@@ -276,7 +303,9 @@ void User::start() {
 		std::unique_ptr<Response> res = Response::get_response(s);
 
 		if(res->header.code != Constants::Responses::codes::MessageRecieved) {
-			// Todo: decide how to handle this error.
+			cerr << "Server should have responded with 'MessageRecieved' response, but responded with something else" << endl;
+			s.close();
+			exit(1);
 		}
 	}
 

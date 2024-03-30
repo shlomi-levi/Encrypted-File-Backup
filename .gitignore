@@ -13,3 +13,5 @@ client/*.docx
 client/*.info
 *.docx
 *.db
+*.key
+*.info

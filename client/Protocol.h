@@ -60,7 +60,6 @@ namespace Constants {
 			constexpr int InvalidCRCFourthTime = 1031;
 		};
 
-		// TODO: CHECK IF I EVEN NEED THIS (I CAN MAYBE USE IT TO VERIFY RESPONSE PAYLOAD SIZES)
 		namespace payload_sizes {
 			constexpr int Registration = Sizes_In_Bytes::CLIENT_NAME;
 			constexpr int PublicKeyTransfer = Sizes_In_Bytes::CLIENT_NAME + Sizes_In_Bytes::PUBLIC_KEY;
@@ -93,7 +92,6 @@ namespace Constants {
 			constexpr int GeneralServerError = 1607;
 		};
 		
-		// TODO: CHECK IF I EVEN NEED THIS (I CAN MAYBE USE IT TO VERIFY RESPONSE PAYLOAD SIZES)
 		namespace payload_sizes {
 			constexpr int RegistrationSuccedded = Sizes_In_Bytes::CLIENT_ID;
 			constexpr int RegistrationFailure = 0;
